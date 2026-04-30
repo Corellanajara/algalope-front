@@ -7,7 +7,11 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ['.ngrok-free.app'],
     proxy: {
-      '/api': 'http://localhost:4000',
+      '/api': {
+        target: 'https://algalope-backend-production.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 });
