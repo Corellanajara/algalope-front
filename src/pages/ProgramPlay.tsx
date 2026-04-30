@@ -1,0 +1,394 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
+import { Program, Pick, PublicCartilla } from '../lib/types';
+import Countdown from '../components/Countdown';
+import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../lib/auth';
+
+export default function ProgramPlay() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const programId = Number(id);
+
+  const progQ = useQuery({
+    queryKey: ['program', programId],
+    queryFn: async () => (await api.get<Program>(`/programs/${programId}`)).data,
+  });
+  const picksQ = useQuery({
+    queryKey: ['picks', 'me'],
+    queryFn: async () => (await api.get<Pick[]>('/picks/me')).data,
+  });
+  const allPicksQ = useQuery({
+    queryKey: ['program', programId, 'all-picks'],
+    queryFn: async () =>
+      (await api.get<PublicCartilla[]>(`/programs/${programId}/picks`)).data,
+  });
+
+  const [selections, setSelections] = useState<Record<number, number>>({});
+  const [toast, setToast] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const myPicks = useMemo(
+    () => (picksQ.data ?? []).filter((p) => progQ.data?.races?.some((r) => r.id === p.raceId)),
+    [picksQ.data, progQ.data],
+  );
+
+  // Initialize from server picks once
+  useEffect(() => {
+    if (myPicks.length && Object.keys(selections).length === 0) {
+      const s: Record<number, number> = {};
+      myPicks.forEach((p) => (s[p.raceId] = p.horseId));
+      setSelections(s);
+    }
+  }, [myPicks.length]);
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      const picks = Object.entries(selections).map(([raceId, horseId]) => ({
+        raceId: Number(raceId),
+        horseId: Number(horseId),
+      }));
+      return (await api.post(`/programs/${programId}/picks`, { picks })).data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['picks'] });
+      qc.invalidateQueries({ queryKey: ['program', programId, 'all-picks'] });
+      setToast('✓ Cartilla guardada');
+      setTimeout(() => setToast(null), 2800);
+    },
+  });
+
+  if (progQ.isLoading) return <p>Cargando cartilla...</p>;
+  if (!progQ.data) return <p>Programa no encontrado.</p>;
+
+  const prog = progQ.data;
+  const races = prog.races ?? [];
+  const expired = timeLeftMs(prog.deadline) <= 0 || prog.status !== 'OPEN';
+  const done = races.filter((r) => selections[r.id]).length;
+  const progress = races.length ? Math.round((done / races.length) * 100) : 0;
+  const ready = done === races.length && races.length > 0;
+  const currentRace = races[currentStep];
+
+  return (
+    <div className="space-y-6 relative pb-24">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-brand-600 font-medium"
+      >
+        ← Volver a programas
+      </Link>
+
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 text-white p-6 sm:p-8 shadow-xl">
+        <div className="absolute -right-4 -bottom-4 text-[160px] opacity-10 select-none">🏇</div>
+        <div className="relative">
+          <p className="text-white/80 text-xs uppercase tracking-widest font-bold">
+            🏟️ {prog.racetrack?.name}
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold mt-1">{prog.name}</h1>
+          <p className="text-white/80 mt-1">{formatDate(prog.programDate)}</p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-2">
+              <span className="text-xs">⏰ Deadline: {formatDateTime(prog.deadline)}</span>
+              <Countdown to={prog.deadline} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar + stepper */}
+      <div className="card p-5 sticky top-[72px] z-20 bg-white/95 backdrop-blur">
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-bold">
+            Cartilla · {done} de {races.length} carreras
+          </p>
+          <span
+            className={`chip ${
+              ready ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }`}
+          >
+            {progress}% completado
+          </span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              ready
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                : 'bg-gradient-to-r from-brand-500 to-brand-400'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+          {races.map((r, i) => {
+            const active = i === currentStep;
+            const filled = !!selections[r.id];
+            return (
+              <button
+                key={r.id}
+                onClick={() => setCurrentStep(i)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition ${
+                  active
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : filled
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                    filled
+                      ? 'bg-emerald-500 text-white'
+                      : active
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {filled ? '✓' : r.raceNumber}
+                </span>
+                <span>Carrera {r.raceNumber}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Current race horses */}
+      {currentRace && (
+        <div className="card p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">
+              Carrera {currentRace.raceNumber} — elige tu caballo
+            </h2>
+            <span className="text-sm text-slate-500">
+              {currentRace.horses?.length ?? 0} opciones
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {currentRace.horses?.map((h) => {
+              const isSel = selections[currentRace.id] === h.id;
+              const res = currentRace.result;
+              const place = res
+                ? h.id === res.firstHorseId
+                  ? 1
+                  : h.id === res.secondHorseId
+                  ? 2
+                  : h.id === res.thirdHorseId
+                  ? 3
+                  : null
+                : null;
+              return (
+                <button
+                  key={h.id}
+                  disabled={expired}
+                  onClick={() => {
+                    setSelections({ ...selections, [currentRace.id]: h.id });
+                    // Auto-advance to next unselected race for smoother flow
+                    setTimeout(() => {
+                      const nextIdx = races.findIndex(
+                        (r, i) => i > currentStep && !selections[r.id] && r.id !== currentRace.id,
+                      );
+                      if (nextIdx !== -1) setCurrentStep(nextIdx);
+                    }, 250);
+                  }}
+                  className={`relative text-left p-4 rounded-2xl border-2 transition-all ${
+                    isSel
+                      ? 'border-brand-500 bg-brand-50 shadow-lg scale-[1.01]'
+                      : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-md'
+                  } ${expired ? 'cursor-not-allowed opacity-80' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-lg shrink-0 ${
+                        isSel ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {h.number}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{h.name}</p>
+                      {h.odds != null && (
+                        <p className="text-xs text-slate-500">Pago estimado {h.odds}x</p>
+                      )}
+                    </div>
+                    {isSel && <span className="chip bg-brand-600 text-white">✓</span>}
+                    {place && (
+                      <span
+                        className={`chip ${
+                          place === 1
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : place === 2
+                            ? 'bg-slate-200 text-slate-700'
+                            : 'bg-orange-100 text-orange-800'
+                        }`}
+                      >
+                        {place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉'}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between mt-5 pt-4 border-t border-slate-100">
+            <button
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
+              className="btn-ghost"
+            >
+              ← Carrera anterior
+            </button>
+            <button
+              onClick={() => setCurrentStep(Math.min(races.length - 1, currentStep + 1))}
+              disabled={currentStep === races.length - 1}
+              className="btn-ghost"
+            >
+              Carrera siguiente →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cartillas públicas — transparencia */}
+      <div className="card p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              👥 Cartillas de todos los usuarios
+            </h2>
+            <p className="text-xs text-slate-500">
+              Visualización pública para garantizar transparencia.
+            </p>
+          </div>
+          <span className="chip bg-slate-100 text-slate-700">
+            {allPicksQ.data?.length ?? 0} usuario{(allPicksQ.data?.length ?? 0) === 1 ? '' : 's'}
+          </span>
+        </div>
+        {allPicksQ.isLoading ? (
+          <p className="text-sm text-slate-500">Cargando cartillas…</p>
+        ) : (allPicksQ.data?.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-500">Aún no hay cartillas registradas para este programa.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-slate-200">
+                  <th className="py-2 pr-3 font-semibold">Usuario</th>
+                  {races.map((r) => (
+                    <th key={r.id} className="py-2 px-2 font-semibold whitespace-nowrap">
+                      C.{r.raceNumber}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allPicksQ.data!.map((c) => {
+                  const isMe = user?.id === c.user.id;
+                  return (
+                    <tr
+                      key={c.user.id}
+                      className={`border-b border-slate-100 ${isMe ? 'bg-brand-50' : ''}`}
+                    >
+                      <td className="py-2 pr-3 font-medium">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white grid place-items-center text-xs font-bold">
+                            {c.user.displayName.slice(0, 1).toUpperCase()}
+                          </span>
+                          {c.user.displayName}
+                          {isMe && <span className="chip bg-brand-600 text-white text-[10px]">tú</span>}
+                        </span>
+                      </td>
+                      {races.map((r) => {
+                        const pick = c.picks.find((p) => p.raceId === r.id);
+                        const res = r.result;
+                        const place = pick && res
+                          ? pick.horseId === res.firstHorseId
+                            ? 1
+                            : pick.horseId === res.secondHorseId
+                            ? 2
+                            : pick.horseId === res.thirdHorseId
+                            ? 3
+                            : null
+                          : null;
+                        return (
+                          <td key={r.id} className="py-2 px-2 whitespace-nowrap">
+                            {pick ? (
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
+                                  place === 1
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : place === 2
+                                    ? 'bg-slate-200 text-slate-700'
+                                    : place === 3
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                                }`}
+                              >
+                                #{pick.horse.number} {pick.horse.name}
+                                {place === 1 ? ' 🥇' : place === 2 ? ' 🥈' : place === 3 ? ' 🥉' : ''}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Summary sticky bar */}
+      <div className="fixed left-0 right-0 bottom-0 z-30 p-3 bg-white border-t border-slate-200 shadow-[0_-6px_20px_rgba(0,0,0,0.05)]">
+        <div className="mx-auto max-w-6xl flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-slate-500">
+              {ready ? '🎉 Cartilla lista' : `Faltan ${races.length - done} carrera${races.length - done === 1 ? '' : 's'} por elegir`}
+            </p>
+            <p className="text-sm font-semibold truncate">
+              {prog.racetrack?.name} · {prog.name}
+            </p>
+          </div>
+          {expired ? (
+            <span className="chip bg-slate-200 text-slate-700">⛔ Deadline cerrado</span>
+          ) : (
+            <>
+              <button onClick={() => nav('/')} className="btn-ghost">
+                Salir
+              </button>
+              <button
+                onClick={() => saveMut.mutate()}
+                disabled={!ready || saveMut.isPending}
+                className="btn-primary"
+              >
+                {saveMut.isPending ? 'Guardando...' : myPicks.length ? 'Actualizar cartilla' : 'Enviar cartilla'}
+              </button>
+            </>
+          )}
+        </div>
+        {saveMut.isError && (
+          <p className="text-center text-sm text-red-700 mt-1">
+            {(saveMut.error as any)?.response?.data?.error || 'Error inesperado'}
+          </p>
+        )}
+      </div>
+
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm font-medium z-40">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
