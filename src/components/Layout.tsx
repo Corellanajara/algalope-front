@@ -1,9 +1,28 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { api } from '../lib/api';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const nav = useNavigate();
+
+  async function changeNickname() {
+    if (!user) return;
+    const next = window.prompt('Nuevo apodo (sin información personal):', user.displayName)?.trim();
+    if (!next || next === user.displayName) return;
+    if (next.length < 2 || next.length > 50) {
+      alert('El apodo debe tener entre 2 y 50 caracteres');
+      return;
+    }
+    try {
+      const { data } = await api.patch('/users/me', { displayName: next });
+      const updated = { ...user, displayName: data.displayName };
+      localStorage.setItem('algalope_user', JSON.stringify(updated));
+      setUser(updated);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'No se pudo actualizar el apodo');
+    }
+  }
 
   const linkCls = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-lg text-sm font-semibold transition ${
@@ -39,6 +58,13 @@ export default function Layout() {
                   {user.role === 'ADMIN' && (
                     <span className="chip bg-brand-500 text-white text-[10px]">ADMIN</span>
                   )}
+                  <button
+                    onClick={changeNickname}
+                    title="Cambiar apodo"
+                    className="ml-1 text-white/70 hover:text-white text-xs"
+                  >
+                    ✏️
+                  </button>
                 </div>
                 <button
                   onClick={() => {

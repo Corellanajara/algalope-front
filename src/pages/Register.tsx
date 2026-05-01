@@ -34,15 +34,20 @@ export default function Register() {
         </div>
         {error && <div className="bg-red-50 text-red-700 text-sm p-2 rounded">{error}</div>}
         <div>
-          <label className="label">Nombre a mostrar</label>
+          <label className="label">Apodo (sin información personal)</label>
           <input
             className="input"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             required
             minLength={2}
+            maxLength={50}
+            placeholder="ej. JineteRojo"
             autoFocus
           />
+          <p className="text-xs text-slate-500 mt-1">
+            Tu apodo es lo que verán los demás. Evita usar tu nombre real.
+          </p>
         </div>
         <div>
           <label className="label">Email</label>
