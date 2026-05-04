@@ -7,6 +7,7 @@ export default function Register() {
   const nav = useNavigate();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [pseudonym, setPseudonym] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function Register() {
     setError(null);
     setLoading(true);
     try {
-      await register(email, password, displayName);
+      await register(email, password, displayName, pseudonym || undefined);
       nav('/');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Error al registrarse');
@@ -47,6 +48,20 @@ export default function Register() {
           />
           <p className="text-xs text-slate-500 mt-1">
             Tu apodo es lo que verán los demás. Evita usar tu nombre real.
+          </p>
+        </div>
+        <div>
+          <label className="label">Seudónimo (opcional)</label>
+          <input
+            className="input"
+            value={pseudonym}
+            onChange={(e) => setPseudonym(e.target.value)}
+            maxLength={50}
+            placeholder="Cómo quieres aparecer en el ranking"
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Si lo defines, se mostrará en lugar de tu apodo en ranking y cartillas. Puedes
+            cambiarlo más tarde.
           </p>
         </div>
         <div>

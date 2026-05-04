@@ -5,6 +5,7 @@ export interface User {
   id: number;
   email: string;
   displayName: string;
+  pseudonym?: string | null;
   role: 'USER' | 'ADMIN';
 }
 
@@ -12,7 +13,12 @@ interface AuthCtx {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+    pseudonym?: string,
+  ) => Promise<void>;
   logout: () => void;
   setUser: (u: User) => void;
 }
@@ -52,8 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  async function register(email: string, password: string, displayName: string) {
-    const { data } = await api.post('/auth/register', { email, password, displayName });
+  async function register(
+    email: string,
+    password: string,
+    displayName: string,
+    pseudonym?: string,
+  ) {
+    const payload: any = { email, password, displayName };
+    if (pseudonym && pseudonym.trim()) payload.pseudonym = pseudonym.trim();
+    const { data } = await api.post('/auth/register', payload);
     localStorage.setItem('algalope_token', data.token);
     localStorage.setItem('algalope_user', JSON.stringify(data.user));
     setUser(data.user);

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Program, Pick, PublicCartilla } from '../lib/types';
+import { Program, Pick, PublicCartilla, displayUserName } from '../lib/types';
 import Countdown from '../components/Countdown';
 import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useState, useEffect, useMemo } from 'react';
@@ -102,10 +102,16 @@ export default function ProgramPlay() {
 
       {/* Progress bar + stepper */}
       <div className="card p-5 sticky top-[72px] z-20 bg-white/95 backdrop-blur">
-        <div className="flex items-center justify-between mb-2">
-          <p className="font-bold">
-            Cartilla · {done} de {races.length} carreras
-          </p>
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div>
+            <p className="font-bold">
+              Carrera {currentStep + 1} de {races.length}
+            </p>
+            <p className="text-xs text-slate-500">
+              ✓ {done} completada{done === 1 ? '' : 's'} · ⏳ {races.length - done} pendiente
+              {races.length - done === 1 ? '' : 's'}
+            </p>
+          </div>
           <span
             className={`chip ${
               ready ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
@@ -299,9 +305,9 @@ export default function ProgramPlay() {
                       <td className="py-2 pr-3 font-medium">
                         <span className="inline-flex items-center gap-2">
                           <span className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white grid place-items-center text-xs font-bold">
-                            {c.user.displayName.slice(0, 1).toUpperCase()}
+                            {displayUserName(c.user).slice(0, 1).toUpperCase()}
                           </span>
-                          {c.user.displayName}
+                          {displayUserName(c.user)}
                           {isMe && <span className="chip bg-brand-600 text-white text-[10px]">tú</span>}
                         </span>
                       </td>

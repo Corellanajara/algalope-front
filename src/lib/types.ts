@@ -26,14 +26,22 @@ export interface Pick {
   horse?: Horse; race?: Race;
 }
 export interface PublicCartilla {
-  user: { id: number; displayName: string; email: string };
+  user: { id: number; displayName: string; pseudonym?: string | null; email: string };
   picks: { raceId: number; horseId: number; horse: Horse }[];
 }
 export interface LeaderEntry {
   rank: number;
-  user: { id: number; displayName: string; email: string };
+  user: { id: number; displayName: string; pseudonym?: string | null; email: string };
   points: number;
   races: number;
+}
+
+export function displayUserName(u: {
+  displayName?: string;
+  pseudonym?: string | null;
+  email?: string;
+}): string {
+  return (u.pseudonym && u.pseudonym.trim()) || u.displayName || u.email || '—';
 }
 export interface Payment {
   id: number; userId: number; weekId: number;

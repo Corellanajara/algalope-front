@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../lib/api';
 import { Program, Racetrack } from '../../lib/types';
-import { formatDate, formatDateTime } from '../../lib/utils';
+import { formatDateTime } from '../../lib/utils';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 function toLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -11,19 +13,9 @@ function toLocalInput(d: Date) {
   )}:${pad(d.getMinutes())}`;
 }
 
-function toDateInput(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-interface DraftHorse {
-  number: number;
-  name: string;
-  odds: string;
-}
 interface DraftRace {
   raceNumber: number;
-  horses: DraftHorse[];
+  horseCount: number;
 }
 
 export default function ManagePrograms() {
@@ -93,8 +85,8 @@ export default function ManagePrograms() {
                   🏟️ {p.racetrack?.name}
                 </p>
                 <h3 className="font-bold text-lg">{p.name}</h3>
-                <p className="text-sm text-slate-500">{formatDate(p.programDate)}</p>
-                <p className="text-xs text-slate-400">Deadline: {formatDateTime(p.deadline)}</p>
+                <p className="text-sm text-slate-500">{formatDateTime(p.programDate)}</p>
+                <p className="text-xs text-slate-400">⏰ Cierre: {formatDateTime(p.deadline)}</p>
               </div>
               <span
                 className={`chip ${
@@ -110,8 +102,7 @@ export default function ManagePrograms() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-slate-600">
-                {p.races?.length ?? 0} carreras ·{' '}
-                {(p.races ?? []).reduce((a, r) => a + (r.horses?.length ?? 0), 0)} caballos
+                {p.races?.length ?? 0} carrera{(p.races?.length ?? 0) === 1 ? '' : 's'}
               </span>
               <div className="flex items-center gap-3">
                 <button
@@ -129,17 +120,6 @@ export default function ManagePrograms() {
                   Eliminar
                 </button>
               </div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
-              {p.races?.map((r) => (
-                <p key={r.id} className="text-xs text-slate-600">
-                  <span className="font-semibold">Carrera {r.raceNumber}</span> ·{' '}
-                  {r.horses?.length ?? 0} caballos:{' '}
-                  <span className="text-slate-500">
-                    {r.horses?.map((h) => h.name).join(', ')}
-                  </span>
-                </p>
-              ))}
             </div>
           </div>
         ))}
@@ -161,8 +141,7 @@ function EditProgramModal({
 }) {
   const [form, setForm] = useState({
     name: program.name,
-    programDate: toDateInput(new Date(program.programDate)),
-    deadline: toLocalInput(new Date(program.deadline)),
+    programDate: toLocalInput(new Date(program.programDate)),
     status: program.status,
   });
 
@@ -172,7 +151,6 @@ function EditProgramModal({
         await api.put(`/programs/${program.id}`, {
           name: form.name,
           programDate: new Date(form.programDate).toISOString(),
-          deadline: new Date(form.deadline).toISOString(),
           status: form.status,
         })
       ).data,
@@ -181,17 +159,13 @@ function EditProgramModal({
 
   const nameTrimmed = form.name.trim();
   const programDateValid = !Number.isNaN(new Date(form.programDate).getTime());
-  const deadlineValid = !Number.isNaN(new Date(form.deadline).getTime());
-  const deadlineBeforeProgram =
-    programDateValid && deadlineValid &&
-    new Date(form.deadline).getTime() <= new Date(form.programDate).getTime();
+  const computedDeadline = programDateValid
+    ? new Date(new Date(form.programDate).getTime() - ONE_HOUR_MS)
+    : null;
 
   const reasons: string[] = [];
   if (!nameTrimmed) reasons.push('El nombre no puede estar vacío.');
-  if (!programDateValid) reasons.push('La fecha del programa es inválida.');
-  if (!deadlineValid) reasons.push('El deadline es inválido.');
-  if (programDateValid && deadlineValid && !deadlineBeforeProgram)
-    reasons.push('El deadline debe ser antes de la fecha del programa.');
+  if (!programDateValid) reasons.push('La fecha y hora del programa son inválidas.');
 
   const canSave = reasons.length === 0 && !updateMut.isPending;
 
@@ -213,25 +187,18 @@ function EditProgramModal({
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="label">📆 Fecha del programa</label>
-              <input
-                type="date"
-                className="input"
-                value={form.programDate}
-                onChange={(e) => setForm({ ...form, programDate: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="label">⏰ Deadline</label>
-              <input
-                type="datetime-local"
-                className="input"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-              />
-            </div>
+          <div>
+            <label className="label">📆 Fecha y hora del programa</label>
+            <input
+              type="datetime-local"
+              className="input"
+              value={form.programDate}
+              onChange={(e) => setForm({ ...form, programDate: e.target.value })}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              ⏰ Cierre automático (1 h antes):{' '}
+              <b>{computedDeadline ? formatDateTime(computedDeadline) : '—'}</b>
+            </p>
           </div>
           <div>
             <label className="label">Estado</label>
@@ -278,7 +245,7 @@ function EditProgramModal({
   );
 }
 
-// --- Wizard ---
+// --- Wizard (simplified) ---
 
 function ProgramWizard({
   tracks,
@@ -295,69 +262,59 @@ function ProgramWizard({
   const [meta, setMeta] = useState({
     racetrackId: 0,
     name: 'Reunión',
-    programDate: toDateInput(new Date(now.getTime() + 2 * 86400000)),
-    deadline: toLocalInput(new Date(now.getTime() + 2 * 86400000 - 3600000)),
+    programDate: toLocalInput(new Date(now.getTime() + 2 * 86400000)),
   });
-  const [races, setRaces] = useState<DraftRace[]>([
-    { raceNumber: 1, horses: [{ number: 1, name: '', odds: '' }, { number: 2, name: '', odds: '' }] },
-  ]);
 
-  function addRace() {
-    const next = races.length + 1;
-    setRaces([
-      ...races,
-      {
-        raceNumber: next,
-        horses: [
-          { number: 1, name: '', odds: '' },
-          { number: 2, name: '', odds: '' },
-        ],
-      },
-    ]);
-  }
-  function removeRace(idx: number) {
-    const next = races.filter((_, i) => i !== idx).map((r, i) => ({ ...r, raceNumber: i + 1 }));
-    setRaces(next);
-  }
-  function setHorseCount(idx: number, count: number) {
-    const next = [...races];
-    const current = next[idx].horses;
-    if (count > current.length) {
-      for (let i = current.length; i < count; i++) {
-        current.push({ number: i + 1, name: '', odds: '' });
-      }
-    } else {
-      next[idx].horses = current.slice(0, count);
+  // Start with a sensible default: 1 race, 12 horses each.
+  const [raceCount, setRaceCount] = useState(1);
+  const [defaultHorses, setDefaultHorses] = useState(12);
+  const [races, setRaces] = useState<DraftRace[]>([{ raceNumber: 1, horseCount: 12 }]);
+
+  function applyRaceCount(n: number) {
+    const safe = Math.max(1, Math.min(40, n));
+    setRaceCount(safe);
+    const next: DraftRace[] = [];
+    for (let i = 0; i < safe; i++) {
+      const existing = races[i];
+      next.push({
+        raceNumber: i + 1,
+        horseCount: existing ? existing.horseCount : defaultHorses,
+      });
     }
     setRaces(next);
   }
-  function setHorse(raceIdx: number, horseIdx: number, field: keyof DraftHorse, value: string) {
-    const next = [...races];
-    (next[raceIdx].horses[horseIdx] as any)[field] =
-      field === 'number' ? Number(value) : value;
-    setRaces(next);
+
+  function applyDefaultHorses(n: number) {
+    const safe = Math.max(2, Math.min(30, n));
+    setDefaultHorses(safe);
+    setRaces(races.map((r) => ({ ...r, horseCount: safe })));
   }
+
+  function setHorsesForRace(idx: number, n: number) {
+    const safe = Math.max(2, Math.min(30, n));
+    setRaces(races.map((r, i) => (i === idx ? { ...r, horseCount: safe } : r)));
+  }
+
+  const programDateValid = !Number.isNaN(new Date(meta.programDate).getTime());
+  const computedDeadline = programDateValid
+    ? new Date(new Date(meta.programDate).getTime() - ONE_HOUR_MS)
+    : null;
 
   const meta1Reasons: string[] = [];
   if (meta.racetrackId <= 0) meta1Reasons.push('Selecciona un club hípico.');
   if (meta.name.trim().length === 0) meta1Reasons.push('Escribe un nombre para el programa.');
-  if (meta.programDate && meta.deadline) {
-    const pd = new Date(meta.programDate).getTime();
-    const dl = new Date(meta.deadline).getTime();
-    if (!Number.isNaN(pd) && !Number.isNaN(dl) && dl >= pd) {
-      meta1Reasons.push('El deadline debe ser antes de la fecha del programa.');
-    }
-  }
+  if (!programDateValid) meta1Reasons.push('La fecha y hora del programa son inválidas.');
   const meta1Valid = meta1Reasons.length === 0;
 
   const racesReasons: string[] = [];
-  if (races.length === 0) racesReasons.push('Agrega al menos una carrera.');
+  if (races.length === 0) racesReasons.push('Debes tener al menos una carrera.');
   races.forEach((r) => {
-    if (r.horses.length < 2) {
+    if (r.horseCount < 2)
       racesReasons.push(`Carrera ${r.raceNumber}: necesita al menos 2 caballos.`);
-    }
   });
   const racesValid = racesReasons.length === 0;
+
+  const totalHorses = races.reduce((a, r) => a + r.horseCount, 0);
 
   const createMut = useMutation({
     mutationFn: async () =>
@@ -366,14 +323,9 @@ function ProgramWizard({
           racetrackId: Number(meta.racetrackId),
           name: meta.name,
           programDate: new Date(meta.programDate).toISOString(),
-          deadline: new Date(meta.deadline).toISOString(),
           races: races.map((r) => ({
             raceNumber: r.raceNumber,
-            horses: r.horses.map((h) => ({
-              number: h.number,
-              name: h.name.trim() || `Caballo ${h.number}`,
-              odds: h.odds ? Number(h.odds) : null,
-            })),
+            horseCount: r.horseCount,
           })),
         })
       ).data,
@@ -457,79 +409,77 @@ function ProgramWizard({
                   placeholder="Ej: Reunión Sábado"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="label">📆 Fecha del programa</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={meta.programDate}
-                    onChange={(e) => setMeta({ ...meta, programDate: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="label">⏰ Deadline para selecciones</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    value={meta.deadline}
-                    onChange={(e) => setMeta({ ...meta, deadline: e.target.value })}
-                  />
-                </div>
+              <div>
+                <label className="label">📆 Fecha y hora del programa</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={meta.programDate}
+                  onChange={(e) => setMeta({ ...meta, programDate: e.target.value })}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  ⏰ Cierre automático (1 h antes):{' '}
+                  <b>{computedDeadline ? formatDateTime(computedDeadline) : '—'}</b>
+                </p>
               </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
-              {races.map((r, idx) => (
-                <div key={idx} className="border border-slate-200 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold">🏁 Carrera {r.raceNumber}</h3>
-                    {races.length > 1 && (
-                      <button
-                        onClick={() => removeRace(idx)}
-                        className="text-red-600 text-sm hover:underline"
-                      >
-                        Quitar
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <label className="text-sm text-slate-600">Nº de caballos:</label>
-                    <HorseCountInput
-                      count={r.horses.length}
-                      onCommit={(n) => setHorseCount(idx, n)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    {r.horses.map((h, hi) => (
-                      <div key={hi} className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-2 sm:col-span-1 w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-700">
-                          {h.number}
-                        </div>
-                        <input
-                          className="input col-span-7 sm:col-span-8"
-                          placeholder={`Nombre caballo #${h.number}`}
-                          value={h.name}
-                          onChange={(e) => setHorse(idx, hi, 'name', e.target.value)}
-                        />
-                        <input
-                          className="input col-span-3"
-                          type="number"
-                          step="0.1"
-                          placeholder="Odds"
-                          value={h.odds}
-                          onChange={(e) => setHorse(idx, hi, 'odds', e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 rounded-2xl p-4">
+                <div>
+                  <label className="label">Cantidad de carreras</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={40}
+                    className="input"
+                    value={raceCount}
+                    onChange={(e) => applyRaceCount(Number(e.target.value) || 1)}
+                  />
                 </div>
-              ))}
-              <button onClick={addRace} className="btn-ghost w-full">
-                + Añadir carrera
-              </button>
+                <div>
+                  <label className="label">Caballos por carrera (por defecto)</label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={30}
+                    className="input"
+                    value={defaultHorses}
+                    onChange={(e) => applyDefaultHorses(Number(e.target.value) || 2)}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Se crearán los caballos automáticamente como Caballo 1, Caballo 2, …
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                  Ajuste por carrera (opcional)
+                </p>
+                {races.map((r, idx) => (
+                  <div
+                    key={idx}
+                    className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3"
+                  >
+                    <span className="font-semibold text-sm">🏁 Carrera {r.raceNumber}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">caballos:</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={30}
+                        className="input max-w-[90px]"
+                        value={r.horseCount}
+                        onChange={(e) =>
+                          setHorsesForRace(idx, Number(e.target.value) || 2)
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -544,28 +494,20 @@ function ProgramWizard({
                   <b>Programa:</b> {meta.name}
                 </p>
                 <p>
-                  <b>Fecha:</b> {formatDate(meta.programDate)}
+                  <b>Fecha y hora:</b> {formatDateTime(meta.programDate)}
                 </p>
                 <p>
-                  <b>Deadline:</b> {formatDateTime(meta.deadline)}
+                  <b>Cierre (auto):</b>{' '}
+                  {computedDeadline ? formatDateTime(computedDeadline) : '—'}
                 </p>
                 <p>
-                  <b>Carreras:</b> {races.length} ·{' '}
-                  <b>Caballos totales:</b> {races.reduce((a, r) => a + r.horses.length, 0)}
+                  <b>Carreras:</b> {races.length} · <b>Caballos totales:</b> {totalHorses}
+                </p>
+                <p className="text-xs text-slate-500 pt-2">
+                  Los caballos serán generados automáticamente como{' '}
+                  <i>Caballo 1, Caballo 2, …</i> según la cantidad por carrera.
                 </p>
               </div>
-              <ul className="space-y-2">
-                {races.map((r) => (
-                  <li key={r.raceNumber} className="border border-slate-200 rounded-xl p-3">
-                    <p className="font-semibold text-sm">
-                      Carrera {r.raceNumber} · {r.horses.length} caballos
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {r.horses.map((h) => `#${h.number} ${h.name.trim() || `Caballo ${h.number}`}`).join(', ')}
-                    </p>
-                  </li>
-                ))}
-              </ul>
               {createMut.isError && (
                 <p className="text-red-700 text-sm">
                   Error: {(createMut.error as any)?.response?.data?.error || 'inesperado'}
@@ -632,56 +574,5 @@ function ProgramWizard({
         </div>
       </div>
     </div>
-  );
-}
-
-function HorseCountInput({
-  count,
-  onCommit,
-}: {
-  count: number;
-  onCommit: (n: number) => void;
-}) {
-  const [draft, setDraft] = useState<string>(String(count));
-  const focusedRef = useRef(false);
-
-  // When the parent count changes from outside (e.g. another race removed and
-  // this slot now shows a different race), sync the draft — but never while the
-  // user is actively editing this input.
-  useEffect(() => {
-    if (!focusedRef.current && draft !== '' && Number(draft) !== count) {
-      setDraft(String(count));
-    }
-  }, [count]);
-
-  return (
-    <input
-      type="number"
-      min={2}
-      max={20}
-      value={draft}
-      onFocus={() => {
-        focusedRef.current = true;
-      }}
-      onChange={(e) => {
-        const v = e.target.value;
-        setDraft(v);
-        if (v === '') return;
-        const n = Number(v);
-        if (Number.isFinite(n) && n >= 2 && n <= 20) onCommit(n);
-      }}
-      onBlur={() => {
-        focusedRef.current = false;
-        const n = Number(draft);
-        if (draft === '' || !Number.isFinite(n) || n < 2) {
-          setDraft('2');
-          onCommit(2);
-        } else if (n > 20) {
-          setDraft('20');
-          onCommit(20);
-        }
-      }}
-      className="input max-w-[80px]"
-    />
   );
 }

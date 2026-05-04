@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { api } from '../lib/api';
 import { Program, Pick, Racetrack } from '../lib/types';
 import Countdown from '../components/Countdown';
-import { formatDate, timeLeftMs } from '../lib/utils';
+import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useAuth } from '../lib/auth';
 
 type Filter = 'all' | 'open' | 'pending' | 'settled';
@@ -251,9 +251,13 @@ function ProgramCard({
         </div>
       </div>
 
+      <div className="mt-3 text-xs text-slate-500">
+        ⏰ Cierre: {formatDateTime(p.deadline)}
+      </div>
+
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
         <span className="text-xs text-slate-500">
-          {(p.races ?? []).reduce((a, r) => a + (r.horses?.length ?? 0), 0)} caballos en total
+          {total} carrera{total === 1 ? '' : 's'}
         </span>
         {settled ? (
           <span className="chip bg-slate-200 text-slate-700">✓ Finalizado</span>

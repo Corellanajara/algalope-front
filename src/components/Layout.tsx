@@ -16,11 +16,35 @@ export default function Layout() {
     }
     try {
       const { data } = await api.patch('/users/me', { displayName: next });
-      const updated = { ...user, displayName: data.displayName };
+      const updated = { ...user, displayName: data.displayName, pseudonym: data.pseudonym };
       localStorage.setItem('algalope_user', JSON.stringify(updated));
       setUser(updated);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'No se pudo actualizar el apodo');
+    }
+  }
+
+  async function changePseudonym() {
+    if (!user) return;
+    const current = user.pseudonym ?? '';
+    const msg = current
+      ? `Tu seudónimo actual es: "${current}".\nIngresa el nuevo (vacío para quitarlo):`
+      : 'Ingresa un seudónimo (se mostrará en ranking y cartillas):';
+    const raw = window.prompt(msg, current);
+    if (raw === null) return;
+    const next = raw.trim();
+    if (next === current) return;
+    if (next && (next.length < 2 || next.length > 50)) {
+      alert('El seudónimo debe tener entre 2 y 50 caracteres');
+      return;
+    }
+    try {
+      const { data } = await api.patch('/users/me', { pseudonym: next || null });
+      const updated = { ...user, displayName: data.displayName, pseudonym: data.pseudonym };
+      localStorage.setItem('algalope_user', JSON.stringify(updated));
+      setUser(updated);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'No se pudo actualizar el seudónimo');
     }
   }
 
@@ -52,9 +76,17 @@ export default function Layout() {
               <>
                 <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-full pl-1 pr-3 py-1">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-white text-xs">
-                    {user.displayName.slice(0, 1).toUpperCase()}
+                    {(user.pseudonym || user.displayName).slice(0, 1).toUpperCase()}
                   </div>
-                  <span className="font-medium">{user.displayName}</span>
+                  <span className="font-medium">{user.pseudonym || user.displayName}</span>
+                  {user.pseudonym && (
+                    <span
+                      className="text-white/60 text-[11px] hidden md:inline"
+                      title={`Apodo: ${user.displayName}`}
+                    >
+                      ({user.displayName})
+                    </span>
+                  )}
                   {user.role === 'ADMIN' && (
                     <span className="chip bg-brand-500 text-white text-[10px]">ADMIN</span>
                   )}
@@ -64,6 +96,17 @@ export default function Layout() {
                     className="ml-1 text-white/70 hover:text-white text-xs"
                   >
                     ✏️
+                  </button>
+                  <button
+                    onClick={changePseudonym}
+                    title={
+                      user.pseudonym
+                        ? `Cambiar seudónimo (actual: ${user.pseudonym})`
+                        : 'Definir seudónimo'
+                    }
+                    className="text-white/70 hover:text-white text-xs"
+                  >
+                    🎭
                   </button>
                 </div>
                 <button

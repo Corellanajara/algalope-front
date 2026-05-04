@@ -1,20 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../lib/api';
-import { LeaderEntry, RaceWeek } from '../lib/types';
+import { LeaderEntry, Program, RaceWeek, displayUserName } from '../lib/types';
 import { useAuth } from '../lib/auth';
 
 export default function Leaderboard() {
   const { user } = useAuth();
   const [weekId, setWeekId] = useState<'all' | number>('all');
+  const [programId, setProgramId] = useState<'all' | number>('all');
+
   const weeks = useQuery({
     queryKey: ['weeks'],
     queryFn: async () => (await api.get<RaceWeek[]>('/programs/weeks')).data,
   });
+  const programsQ = useQuery({
+    queryKey: ['programs', 'all-for-leaderboard'],
+    queryFn: async () => (await api.get<Program[]>('/programs')).data,
+  });
   const board = useQuery({
-    queryKey: ['leaderboard', weekId],
+    queryKey: ['leaderboard', weekId, programId],
     queryFn: async () => {
-      const q = weekId === 'all' ? '' : `?weekId=${weekId}`;
+      const params = new URLSearchParams();
+      if (programId !== 'all') params.set('programId', String(programId));
+      else if (weekId !== 'all') params.set('weekId', String(weekId));
+      const q = params.toString() ? `?${params}` : '';
       return (await api.get<LeaderEntry[]>(`/leaderboard${q}`)).data;
     },
   });
@@ -22,28 +31,51 @@ export default function Leaderboard() {
   const top3 = (board.data ?? []).slice(0, 3);
   const rest = (board.data ?? []).slice(3);
 
+  const subtitle =
+    programId !== 'all'
+      ? `Ranking del programa #${programId}`
+      : weekId === 'all'
+      ? 'Acumulado general'
+      : 'Ranking de la semana';
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-extrabold">🏆 Ranking</h1>
-          <p className="text-slate-600">
-            {weekId === 'all' ? 'Acumulado general' : 'Ranking de la semana'}
-          </p>
+          <p className="text-slate-600">{subtitle}</p>
         </div>
-        <select
-          className="input max-w-xs"
-          value={weekId}
-          onChange={(e) => setWeekId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-        >
-          <option value="all">Acumulado general</option>
-          {weeks.data?.map((w) => (
-            <option key={w.id} value={w.id}>
-              Semana {w.weekNumber} / {w.year}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="input max-w-xs"
+            value={programId}
+            onChange={(e) =>
+              setProgramId(e.target.value === 'all' ? 'all' : Number(e.target.value))
+            }
+          >
+            <option value="all">Todos los programas</option>
+            {programsQ.data?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.racetrack?.name ? `${p.racetrack.name} · ` : ''}
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="input max-w-xs"
+            value={weekId}
+            disabled={programId !== 'all'}
+            onChange={(e) => setWeekId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          >
+            <option value="all">Acumulado general</option>
+            {weeks.data?.map((w) => (
+              <option key={w.id} value={w.id}>
+                Semana {w.weekNumber} / {w.year}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Podium */}
@@ -74,36 +106,41 @@ export default function Leaderboard() {
                 </td>
               </tr>
             )}
-            {rest.map((e) => (
-              <tr
-                key={e.user.id}
-                className={`border-t border-slate-100 ${
-                  e.user.id === user?.id ? 'bg-brand-50/50' : ''
-                }`}
-              >
-                <td className="p-4 font-bold text-slate-500">{e.rank}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-white text-sm">
-                      {e.user.displayName.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="font-semibold flex items-center gap-1.5">
-                        {e.user.displayName}
-                        {e.user.id === user?.id && (
-                          <span className="chip bg-brand-100 text-brand-700">Tú</span>
+            {rest.map((e) => {
+              const name = displayUserName(e.user);
+              return (
+                <tr
+                  key={e.user.id}
+                  className={`border-t border-slate-100 ${
+                    e.user.id === user?.id ? 'bg-brand-50/50' : ''
+                  }`}
+                >
+                  <td className="p-4 font-bold text-slate-500">{e.rank}</td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center font-bold text-white text-sm">
+                        {name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold flex items-center gap-1.5">
+                          {name}
+                          {e.user.id === user?.id && (
+                            <span className="chip bg-brand-100 text-brand-700">Tú</span>
+                          )}
+                        </div>
+                        {!e.user.pseudonym && (
+                          <div className="text-xs text-slate-500">{e.user.email}</div>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">{e.user.email}</div>
                     </div>
-                  </div>
-                </td>
-                <td className="p-4 text-right hidden sm:table-cell tabular-nums">{e.races}</td>
-                <td className="p-4 text-right font-extrabold text-brand-600 tabular-nums">
-                  {e.points}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="p-4 text-right hidden sm:table-cell tabular-nums">{e.races}</td>
+                  <td className="p-4 text-right font-extrabold text-brand-600 tabular-nums">
+                    {e.points}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -147,7 +184,7 @@ function PodiumCard({
       }`}
     >
       <div className={`${cfg.size} mb-1`}>{cfg.icon}</div>
-      <p className="font-bold truncate">{e.user.displayName}</p>
+      <p className="font-bold truncate">{displayUserName(e.user)}</p>
       <p className="text-2xl font-extrabold tabular-nums">{e.points}</p>
       <p className="text-[11px] opacity-90 uppercase tracking-wider">puntos</p>
     </div>
