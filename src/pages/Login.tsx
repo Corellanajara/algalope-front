@@ -9,6 +9,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [titleTaps, setTitleTaps] = useState(0);
+  const showQuickAccounts = titleTaps >= 20;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,7 +67,19 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-3xl shadow-lg shadow-brand-600/30">
             🏇
           </div>
-          <h1 className="text-3xl font-extrabold mt-3">Algalope</h1>
+          <h1
+            className="text-3xl font-extrabold mt-3 cursor-pointer select-none inline-block"
+            onClick={() => setTitleTaps((n) => n + 1)}
+            title={
+              showQuickAccounts
+                ? 'Modo desarrollador activo'
+                : titleTaps > 0
+                ? `${titleTaps}/20`
+                : undefined
+            }
+          >
+            Algalope
+          </h1>
           <p className="text-slate-500 text-sm">Pronósticos hípicos con puntos</p>
         </div>
         {error && (
@@ -98,32 +112,34 @@ export default function Login() {
           {loading ? 'Entrando...' : 'Entrar →'}
         </button>
 
-        <div className="pt-4 border-t border-slate-100 space-y-2">
-          <p className="text-xs text-slate-500 text-center font-medium">
-            Login rápido (clic para entrar)
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {quickAccounts.map((a) => (
-              <button
-                key={a.email}
-                type="button"
-                onClick={() => quickLogin(a.email, a.password)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  fill(a.email, a.password);
-                }}
-                disabled={loading}
-                className="text-xs bg-slate-100 hover:bg-brand-100 rounded-lg p-2 text-left transition disabled:opacity-50"
-                title="Clic = entrar · Clic derecho = autocompletar"
-              >
-                <span className="block font-semibold">
-                  {a.icon} {a.label}
-                </span>
-                <span className="block text-slate-500 truncate">{a.email}</span>
-              </button>
-            ))}
+        {showQuickAccounts && (
+          <div className="pt-4 border-t border-slate-100 space-y-2">
+            <p className="text-xs text-slate-500 text-center font-medium">
+              Login rápido (clic para entrar)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {quickAccounts.map((a) => (
+                <button
+                  key={a.email}
+                  type="button"
+                  onClick={() => quickLogin(a.email, a.password)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    fill(a.email, a.password);
+                  }}
+                  disabled={loading}
+                  className="text-xs bg-slate-100 hover:bg-brand-100 rounded-lg p-2 text-left transition disabled:opacity-50"
+                  title="Clic = entrar · Clic derecho = autocompletar"
+                >
+                  <span className="block font-semibold">
+                    {a.icon} {a.label}
+                  </span>
+                  <span className="block text-slate-500 truncate">{a.email}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <p className="text-sm text-center text-slate-600">
           ¿No tienes cuenta?{' '}
