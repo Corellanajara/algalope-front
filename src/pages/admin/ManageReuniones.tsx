@@ -77,7 +77,12 @@ export default function ManageReuniones() {
             <p className="text-slate-600">No hay reuniones. Crea la primera.</p>
           </div>
         )}
-        {reunionesQ.data?.map((r) => (
+        {[...(reunionesQ.data ?? [])]
+          .sort(
+            (a, b) =>
+              new Date(b.reunionDate).getTime() - new Date(a.reunionDate).getTime(),
+          )
+          .map((r) => (
           <div key={r.id} className="card p-5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
