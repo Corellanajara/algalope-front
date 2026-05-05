@@ -45,13 +45,18 @@ export default function Dashboard() {
     return { r, total, doneCount, expired };
   });
 
-  const filtered = enriched.filter(({ r, expired, doneCount, total }) => {
-    if (racetrackId !== 'all' && r.racetrackId !== racetrackId) return false;
-    if (filter === 'open' && expired) return false;
-    if (filter === 'pending' && (expired || doneCount === total)) return false;
-    if (filter === 'settled' && r.status !== 'SETTLED') return false;
-    return true;
-  });
+  const filtered = enriched
+    .filter(({ r, expired, doneCount, total }) => {
+      if (racetrackId !== 'all' && r.racetrackId !== racetrackId) return false;
+      if (filter === 'open' && expired) return false;
+      if (filter === 'pending' && (expired || doneCount === total)) return false;
+      if (filter === 'settled' && r.status !== 'SETTLED') return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.expired !== b.expired) return a.expired ? 1 : -1;
+      return new Date(a.r.reunionDate).getTime() - new Date(b.r.reunionDate).getTime();
+    });
 
   const openReuniones = enriched.filter((e) => !e.expired).length;
   const pending = enriched.filter((e) => !e.expired && e.doneCount < e.total).length;
