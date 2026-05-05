@@ -98,7 +98,7 @@ export default function Dashboard() {
             Reuniones hípicas
           </h1>
           <p className="text-white/80 mt-2 max-w-lg">
-            Cada reunión pertenece a un club hípico. Debes completar <b>toda la cartilla</b> antes
+            Cada reunión pertenece a una pista. Debes completar <b>toda la cartilla</b> antes
             del deadline para participar.
           </p>
         </div>
