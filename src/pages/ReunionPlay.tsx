@@ -6,6 +6,8 @@ import Countdown from '../components/Countdown';
 import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../lib/auth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function ReunionPlay() {
   const { id } = useParams();
@@ -72,6 +74,47 @@ export default function ReunionPlay() {
   const progress = races.length ? Math.round((done / races.length) * 100) : 0;
   const ready = done === races.length && races.length > 0;
   const currentRace = races[currentStep];
+
+  function downloadPdf() {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const title = `${reunion.racetrack?.name ?? ''} — ${reunion.name}`;
+    doc.setFontSize(14);
+    doc.text(title, 14, 14);
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${formatDateTime(reunion.reunionDate)}`, 14, 21);
+    doc.text(`Cierre: ${formatDateTime(reunion.deadline)}`, 14, 26);
+
+    const head = [['Usuario', ...races.map((r) => `C.${r.raceNumber}`)]];
+    const body = (allPicksQ.data ?? []).map((c) => [
+      displayUserName(c.user),
+      ...races.map((r) => {
+        const pick = c.picks.find((p) => p.raceId === r.id);
+        if (!pick) return '—';
+        const res = r.result;
+        const place = res
+          ? pick.horseId === res.firstHorseId
+            ? ' (1°)'
+            : pick.horseId === res.secondHorseId
+            ? ' (2°)'
+            : pick.horseId === res.thirdHorseId
+            ? ' (3°)'
+            : ''
+          : '';
+        return `${pick.horse.name}${place}`;
+      }),
+    ]);
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 32,
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [55, 65, 81] },
+    });
+
+    const fname = `cartillas-${reunion.name.replace(/\s+/g, '_')}-${reunion.id}.pdf`;
+    doc.save(fname);
+  }
 
   return (
     <div className="space-y-6 relative pb-24">
@@ -273,9 +316,16 @@ export default function ReunionPlay() {
               Visualización pública para garantizar transparencia.
             </p>
           </div>
-          <span className="chip bg-slate-100 text-slate-700">
-            {allPicksQ.data?.length ?? 0} usuario{(allPicksQ.data?.length ?? 0) === 1 ? '' : 's'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="chip bg-slate-100 text-slate-700">
+              {allPicksQ.data?.length ?? 0} usuario{(allPicksQ.data?.length ?? 0) === 1 ? '' : 's'}
+            </span>
+            {expired && (allPicksQ.data?.length ?? 0) > 0 && (
+              <button onClick={downloadPdf} className="btn-primary text-sm">
+                📄 Descargar PDF
+              </button>
+            )}
+          </div>
         </div>
         {allPicksQ.isLoading ? (
           <p className="text-sm text-slate-500">Cargando cartillas…</p>
