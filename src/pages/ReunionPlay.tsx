@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Reunion, Pick, PublicCartilla, displayUserName } from '../lib/types';
+import { Reunion, Pick, PublicCartilla, LeaderEntry, displayUserName } from '../lib/types';
 import Countdown from '../components/Countdown';
 import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useState, useEffect, useMemo } from 'react';
@@ -28,6 +28,11 @@ export default function ReunionPlay() {
     queryKey: ['reunion', reunionId, 'all-picks'],
     queryFn: async () =>
       (await api.get<PublicCartilla[]>(`/reuniones/${reunionId}/picks`)).data,
+  });
+  const reunionScoresQ = useQuery({
+    queryKey: ['leaderboard', { reunionId }],
+    queryFn: async () =>
+      (await api.get<LeaderEntry[]>(`/leaderboard?reunionId=${reunionId}`)).data,
   });
 
   const [selections, setSelections] = useState<Record<number, number>>({});
@@ -75,6 +80,75 @@ export default function ReunionPlay() {
   const ready = done === races.length && races.length > 0;
   const currentRace = races[currentStep];
 
+  const pointsByUser = useMemo(
+    () => new Map((reunionScoresQ.data ?? []).map((e) => [e.user.id, e.points])),
+    [reunionScoresQ.data],
+  );
+
+  function buildRows() {
+    return (allPicksQ.data ?? []).map((c) => {
+      const nickname = c.user.pseudonym?.trim() || '';
+      const apodo = c.user.displayName ?? '';
+      return {
+        nickname,
+        apodo,
+        userId: c.user.id,
+        cells: races.map((r) => {
+          const pick = c.picks.find((p) => p.raceId === r.id);
+          if (!pick) return { text: '—', place: null as 1 | 2 | 3 | null };
+          const res = r.result;
+          const place: 1 | 2 | 3 | null = res
+            ? pick.horseId === res.firstHorseId
+              ? 1
+              : pick.horseId === res.secondHorseId
+              ? 2
+              : pick.horseId === res.thirdHorseId
+              ? 3
+              : null
+            : null;
+          return { text: pick.horse.name, place };
+        }),
+        points: pointsByUser.get(c.user.id) ?? 0,
+      };
+    });
+  }
+
+  function downloadCsv() {
+    const rows = buildRows();
+    const header = [
+      'Nickname',
+      'Apodo',
+      ...races.map((r) => `Carrera ${r.raceNumber}`),
+      'Puntaje',
+    ];
+    const lines = [header];
+    for (const r of rows) {
+      lines.push([
+        r.nickname,
+        r.apodo,
+        ...r.cells.map((c) => (c.place ? `${c.text} (${c.place}°)` : c.text)),
+        String(r.points),
+      ]);
+    }
+    const csv = lines
+      .map((row) =>
+        row
+          .map((cell) => {
+            const v = String(cell ?? '');
+            return /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+          })
+          .join(';'),
+      )
+      .join('\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cartillas-${reunion.name.replace(/\s+/g, '_')}-${reunion.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function downloadPdf() {
     const doc = new jsPDF({ orientation: 'landscape' });
     const title = `${reunion.racetrack?.name ?? ''} — ${reunion.name}`;
@@ -84,24 +158,14 @@ export default function ReunionPlay() {
     doc.text(`Fecha: ${formatDateTime(reunion.reunionDate)}`, 14, 21);
     doc.text(`Cierre: ${formatDateTime(reunion.deadline)}`, 14, 26);
 
-    const head = [['Usuario', ...races.map((r) => `C.${r.raceNumber}`)]];
-    const body = (allPicksQ.data ?? []).map((c) => [
-      displayUserName(c.user),
-      ...races.map((r) => {
-        const pick = c.picks.find((p) => p.raceId === r.id);
-        if (!pick) return '—';
-        const res = r.result;
-        const place = res
-          ? pick.horseId === res.firstHorseId
-            ? ' (1°)'
-            : pick.horseId === res.secondHorseId
-            ? ' (2°)'
-            : pick.horseId === res.thirdHorseId
-            ? ' (3°)'
-            : ''
-          : '';
-        return `${pick.horse.name}${place}`;
-      }),
+    const head = [
+      ['Nickname', 'Apodo', ...races.map((r) => `C.${r.raceNumber}`), 'Puntaje'],
+    ];
+    const body = buildRows().map((r) => [
+      r.nickname,
+      r.apodo,
+      ...r.cells.map((c) => (c.place ? `${c.text} (${c.place}°)` : c.text)),
+      String(r.points),
     ]);
 
     autoTable(doc, {
@@ -316,13 +380,18 @@ export default function ReunionPlay() {
               Visualización pública para garantizar transparencia.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="chip bg-slate-100 text-slate-700">
               {allPicksQ.data?.length ?? 0} usuario{(allPicksQ.data?.length ?? 0) === 1 ? '' : 's'}
             </span>
+            {(allPicksQ.data?.length ?? 0) > 0 && (
+              <button onClick={downloadCsv} className="btn-ghost text-sm">
+                📊 CSV
+              </button>
+            )}
             {expired && (allPicksQ.data?.length ?? 0) > 0 && (
               <button onClick={downloadPdf} className="btn-primary text-sm">
-                📄 Descargar PDF
+                📄 PDF
               </button>
             )}
           </div>
@@ -333,33 +402,54 @@ export default function ReunionPlay() {
           <p className="text-sm text-slate-500">Aún no hay cartillas registradas para esta reunión.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="text-left border-b border-slate-200">
-                  <th className="py-2 pr-3 font-semibold">Usuario</th>
+                <tr className="text-left border-b-2 border-slate-200 bg-slate-50">
+                  <th className="py-2 px-3 font-semibold sticky left-0 bg-slate-50 z-10">
+                    <div className="text-xs uppercase tracking-wider text-slate-500">Nickname</div>
+                    <div className="text-[10px] font-normal text-slate-400">Apodo</div>
+                  </th>
                   {races.map((r) => (
-                    <th key={r.id} className="py-2 px-2 font-semibold whitespace-nowrap">
+                    <th
+                      key={r.id}
+                      className="py-2 px-2 font-semibold whitespace-nowrap text-center"
+                    >
                       C.{r.raceNumber}
                     </th>
                   ))}
+                  <th className="py-2 px-3 font-semibold text-right">Puntaje</th>
                 </tr>
               </thead>
               <tbody>
                 {allPicksQ.data!.map((c) => {
                   const isMe = user?.id === c.user.id;
+                  const nickname = c.user.pseudonym?.trim() || '—';
+                  const apodo = c.user.displayName;
+                  const points = pointsByUser.get(c.user.id) ?? 0;
                   return (
                     <tr
                       key={c.user.id}
                       className={`border-b border-slate-100 ${isMe ? 'bg-brand-50' : ''}`}
                     >
-                      <td className="py-2 pr-3 font-medium">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white grid place-items-center text-xs font-bold">
+                      <td
+                        className={`py-2 px-3 align-middle sticky left-0 ${
+                          isMe ? 'bg-brand-50' : 'bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white grid place-items-center text-xs font-bold shrink-0">
                             {displayUserName(c.user).slice(0, 1).toUpperCase()}
                           </span>
-                          {displayUserName(c.user)}
-                          {isMe && <span className="chip bg-brand-600 text-white text-[10px]">tú</span>}
-                        </span>
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate flex items-center gap-1.5">
+                              {nickname}
+                              {isMe && (
+                                <span className="chip bg-brand-600 text-white text-[10px]">tú</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 truncate">{apodo}</div>
+                          </div>
+                        </div>
                       </td>
                       {races.map((r) => {
                         const pick = c.picks.find((p) => p.raceId === r.id);
@@ -374,7 +464,7 @@ export default function ReunionPlay() {
                             : null
                           : null;
                         return (
-                          <td key={r.id} className="py-2 px-2 whitespace-nowrap">
+                          <td key={r.id} className="py-2 px-2 whitespace-nowrap text-center align-middle">
                             {pick ? (
                               <span
                                 className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
@@ -396,6 +486,9 @@ export default function ReunionPlay() {
                           </td>
                         );
                       })}
+                      <td className="py-2 px-3 text-right font-extrabold text-brand-600 tabular-nums align-middle">
+                        {points}
+                      </td>
                     </tr>
                   );
                 })}
