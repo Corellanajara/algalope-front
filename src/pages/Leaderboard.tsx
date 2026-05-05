@@ -170,7 +170,7 @@ function PodiumCard({
     3: {
       icon: '🥉',
       grad: 'from-orange-500 via-amber-600 to-orange-700',
-      h: 'h-32',
+      h: 'h-36',
       size: 'text-4xl',
     },
   }[place];
