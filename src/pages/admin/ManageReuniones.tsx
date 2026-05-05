@@ -261,7 +261,7 @@ function ReunionWizard({
   const now = new Date();
   const [meta, setMeta] = useState({
     racetrackId: 0,
-    name: 'Reunión',
+    name: 'Reunión Nº',
     reunionDate: toLocalInput(new Date(now.getTime() + 2 * 86400000)),
   });
 
