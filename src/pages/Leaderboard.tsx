@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../lib/api';
-import { LeaderEntry, Program, RaceWeek, displayUserName } from '../lib/types';
+import { LeaderEntry, Program, RaceWeek } from '../lib/types';
 import { useAuth } from '../lib/auth';
 
 export default function Leaderboard() {
@@ -107,7 +107,7 @@ export default function Leaderboard() {
               </tr>
             )}
             {rest.map((e) => {
-              const name = displayUserName(e.user);
+              const name = (e.user.pseudonym && e.user.pseudonym.trim()) || e.user.displayName;
               return (
                 <tr
                   key={e.user.id}
@@ -128,9 +128,6 @@ export default function Leaderboard() {
                             <span className="chip bg-brand-100 text-brand-700">Tú</span>
                           )}
                         </div>
-                        {!e.user.pseudonym && (
-                          <div className="text-xs text-slate-500">{e.user.email}</div>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -184,7 +181,7 @@ function PodiumCard({
       }`}
     >
       <div className={`${cfg.size} mb-1`}>{cfg.icon}</div>
-      <p className="font-bold truncate">{displayUserName(e.user)}</p>
+      <p className="font-bold truncate">{(e.user.pseudonym && e.user.pseudonym.trim()) || e.user.displayName}</p>
       <p className="text-2xl font-extrabold tabular-nums">{e.points}</p>
       <p className="text-[11px] opacity-90 uppercase tracking-wider">puntos</p>
     </div>
