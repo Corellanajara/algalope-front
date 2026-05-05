@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { Program, Racetrack } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
@@ -430,24 +430,20 @@ function ProgramWizard({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 rounded-2xl p-4">
                 <div>
                   <label className="label">Cantidad de carreras</label>
-                  <input
-                    type="number"
+                  <IntInput
+                    value={raceCount}
                     min={1}
                     max={40}
-                    className="input"
-                    value={raceCount}
-                    onChange={(e) => applyRaceCount(Number(e.target.value) || 1)}
+                    onCommit={applyRaceCount}
                   />
                 </div>
                 <div>
                   <label className="label">Caballos por carrera (por defecto)</label>
-                  <input
-                    type="number"
+                  <IntInput
+                    value={defaultHorses}
                     min={2}
                     max={30}
-                    className="input"
-                    value={defaultHorses}
-                    onChange={(e) => applyDefaultHorses(Number(e.target.value) || 2)}
+                    onCommit={applyDefaultHorses}
                   />
                   <p className="text-xs text-slate-500 mt-1">
                     Se crearán los caballos automáticamente como Caballo 1, Caballo 2, …
@@ -466,15 +462,12 @@ function ProgramWizard({
                     <span className="font-semibold text-sm">🏁 Carrera {r.raceNumber}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-500">caballos:</span>
-                      <input
-                        type="number"
+                      <IntInput
+                        value={r.horseCount}
                         min={2}
                         max={30}
-                        className="input max-w-[90px]"
-                        value={r.horseCount}
-                        onChange={(e) =>
-                          setHorsesForRace(idx, Number(e.target.value) || 2)
-                        }
+                        className="max-w-[90px]"
+                        onCommit={(n) => setHorsesForRace(idx, n)}
                       />
                     </div>
                   </div>
@@ -574,5 +567,65 @@ function ProgramWizard({
         </div>
       </div>
     </div>
+  );
+}
+
+// Numeric input that lets the user clear it freely while typing.
+// `value` is the canonical committed value from the parent. While focused, the
+// input keeps its own draft string (which can be empty or invalid), and only
+// commits to the parent on a valid number. On blur, an empty/out-of-range draft
+// is snapped back to the nearest in-range value.
+function IntInput({
+  value,
+  min,
+  max,
+  onCommit,
+  className = '',
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (n: number) => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState<string>(String(value));
+  const focused = useRef(false);
+
+  useEffect(() => {
+    if (!focused.current && draft !== String(value)) setDraft(String(value));
+  }, [value]);
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      value={draft}
+      className={`input ${className}`}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onChange={(e) => {
+        const v = e.target.value;
+        setDraft(v);
+        if (v === '') return;
+        const n = Number(v);
+        if (Number.isFinite(n) && n >= min && n <= max) onCommit(n);
+      }}
+      onBlur={() => {
+        focused.current = false;
+        const n = Number(draft);
+        if (draft === '' || !Number.isFinite(n) || n < min) {
+          setDraft(String(min));
+          onCommit(min);
+        } else if (n > max) {
+          setDraft(String(max));
+          onCommit(max);
+        } else {
+          setDraft(String(n));
+        }
+      }}
+    />
   );
 }
