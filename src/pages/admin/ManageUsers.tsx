@@ -8,6 +8,7 @@ interface AdminUser {
   id: number;
   email: string;
   displayName: string;
+  pseudonym: string | null;
   role: 'USER' | 'ADMIN';
   createdAt: string;
 }
@@ -21,7 +22,7 @@ export default function ManageUsers() {
   });
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ email: '', displayName: '', password: '', role: 'USER' as 'USER' | 'ADMIN' });
+  const [form, setForm] = useState({ email: '', displayName: '', pseudonym: '', password: '', role: 'USER' as 'USER' | 'ADMIN' });
   const [error, setError] = useState<string | null>(null);
 
   const createMut = useMutation({
@@ -29,14 +30,14 @@ export default function ManageUsers() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       setShowForm(false);
-      setForm({ email: '', displayName: '', password: '', role: 'USER' });
+      setForm({ email: '', displayName: '', pseudonym: '', password: '', role: 'USER' });
       setError(null);
     },
     onError: (err: any) => setError(err?.response?.data?.error || 'Error al crear usuario'),
   });
 
   const updateMut = useMutation({
-    mutationFn: async ({ id, ...payload }: { id: number; displayName?: string; role?: 'USER' | 'ADMIN'; password?: string }) =>
+    mutationFn: async ({ id, ...payload }: { id: number; displayName?: string; pseudonym?: string | null; role?: 'USER' | 'ADMIN'; password?: string }) =>
       (await api.patch<AdminUser>(`/users/${id}`, payload)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
     onError: (err: any) => alert(err?.response?.data?.error || 'Error al actualizar'),
@@ -52,6 +53,16 @@ export default function ManageUsers() {
     const next = window.prompt(`Nuevo apodo para ${u.email}:`, u.displayName)?.trim();
     if (!next || next === u.displayName) return;
     updateMut.mutate({ id: u.id, displayName: next });
+  }
+
+  function editPseudonym(u: AdminUser) {
+    const raw = window.prompt(
+      `Pseudónimo (nickname) para ${u.email} — vacío para quitar:`,
+      u.pseudonym ?? '',
+    );
+    if (raw === null) return;
+    const trimmed = raw.trim();
+    updateMut.mutate({ id: u.id, pseudonym: trimmed === '' ? null : trimmed });
   }
 
   function resetPassword(u: AdminUser) {
@@ -86,7 +97,8 @@ export default function ManageUsers() {
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);
-            createMut.mutate(form);
+            const payload = { ...form, pseudonym: form.pseudonym.trim() || undefined };
+            createMut.mutate(payload as typeof form);
           }}
           className="card p-4 grid grid-cols-1 md:grid-cols-2 gap-3"
         >
@@ -100,6 +112,16 @@ export default function ManageUsers() {
               minLength={2}
               maxLength={50}
               placeholder="ej. JineteRojo"
+            />
+          </div>
+          <div>
+            <label className="label">Pseudónimo (opcional)</label>
+            <input
+              className="input"
+              value={form.pseudonym}
+              onChange={(e) => setForm({ ...form, pseudonym: e.target.value })}
+              maxLength={50}
+              placeholder="ej. Bless"
             />
           </div>
           <div>
@@ -149,6 +171,7 @@ export default function ManageUsers() {
             <tr>
               <th className="p-3">#</th>
               <th className="p-3">Apodo</th>
+              <th className="p-3">Pseudónimo</th>
               <th className="p-3">Email</th>
               <th className="p-3">Rol</th>
               <th className="p-3">Registrado</th>
@@ -160,6 +183,9 @@ export default function ManageUsers() {
               <tr key={u.id} className="border-t border-slate-100">
                 <td className="p-3">{u.id}</td>
                 <td className="p-3 font-medium">{u.displayName}</td>
+                <td className="p-3 text-sm">
+                  {u.pseudonym ?? <span className="text-slate-400">—</span>}
+                </td>
                 <td className="p-3">{u.email}</td>
                 <td className="p-3">
                   <span
@@ -176,6 +202,9 @@ export default function ManageUsers() {
                 <td className="p-3 text-right space-x-2 whitespace-nowrap">
                   <button className="text-brand-600 hover:underline text-sm" onClick={() => editNickname(u)}>
                     Apodo
+                  </button>
+                  <button className="text-brand-600 hover:underline text-sm" onClick={() => editPseudonym(u)}>
+                    Pseudónimo
                   </button>
                   <button className="text-brand-600 hover:underline text-sm" onClick={() => resetPassword(u)}>
                     Contraseña
