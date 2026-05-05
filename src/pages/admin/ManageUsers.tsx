@@ -68,7 +68,7 @@ export default function ManageUsers() {
   }
 
   function removeUser(u: AdminUser) {
-    if (!window.confirm(`¿Eliminar usuario ${u.displayName} (${u.email})? Esto borra sus apuestas y pagos.`)) return;
+    if (!window.confirm(`¿Eliminar usuario ${u.displayName} (${u.email})? Esto borra sus apuestas.`)) return;
     deleteMut.mutate(u.id);
   }
 

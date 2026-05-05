@@ -43,9 +43,3 @@ export function displayUserName(u: {
 }): string {
   return (u.pseudonym && u.pseudonym.trim()) || u.displayName || u.email || '—';
 }
-export interface Payment {
-  id: number; userId: number; weekId: number;
-  paid: boolean; paidAt: string | null; note: string | null;
-  user?: { id: number; displayName: string; email: string };
-  week?: RaceWeek;
-}

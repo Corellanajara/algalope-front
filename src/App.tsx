@@ -10,7 +10,6 @@ import Leaderboard from './pages/Leaderboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManagePrograms from './pages/admin/ManagePrograms';
 import EnterResults from './pages/admin/EnterResults';
-import ManagePayments from './pages/admin/ManagePayments';
 import ManageUsers from './pages/admin/ManageUsers';
 
 export default function App() {
@@ -28,7 +27,6 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/programas" element={<ManagePrograms />} />
             <Route path="/admin/resultados" element={<EnterResults />} />
-            <Route path="/admin/pagos" element={<ManagePayments />} />
             <Route path="/admin/usuarios" element={<ManageUsers />} />
           </Route>
         </Route>

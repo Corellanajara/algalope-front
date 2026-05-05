@@ -14,12 +14,6 @@ const tiles = [
     desc: 'Ingresar 1°/2°/3° y dividendo por carrera.',
   },
   {
-    to: '/admin/pagos',
-    title: 'Pagos',
-    icon: '💳',
-    desc: 'Registrar pagos manuales por semana.',
-  },
-  {
     to: '/admin/usuarios',
     title: 'Usuarios',
     icon: '👥',
@@ -31,7 +25,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-extrabold">Panel de administración</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => (
           <Link
             key={t.to}
