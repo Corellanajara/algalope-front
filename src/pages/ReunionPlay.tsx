@@ -38,6 +38,7 @@ export default function ReunionPlay() {
   const [selections, setSelections] = useState<Record<number, number>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [stepInitialized, setStepInitialized] = useState(false);
 
   const myPicks = useMemo(
     () => (picksQ.data ?? []).filter((p) => reunionQ.data?.races?.some((r) => r.id === p.raceId)),
@@ -52,6 +53,17 @@ export default function ReunionPlay() {
       setSelections(s);
     }
   }, [myPicks.length]);
+
+  // On first load, focus the race in progress: first one without a result.
+  // Falls back to last race if every race already has a result.
+  useEffect(() => {
+    if (stepInitialized) return;
+    const list = reunionQ.data?.races ?? [];
+    if (list.length === 0) return;
+    const idx = list.findIndex((r) => !r.result);
+    setCurrentStep(idx === -1 ? list.length - 1 : idx);
+    setStepInitialized(true);
+  }, [reunionQ.data, stepInitialized]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
