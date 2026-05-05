@@ -405,7 +405,7 @@ export default function ReunionPlay() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="text-left border-b-2 border-slate-200 bg-slate-50">
-                  <th className="py-2 px-3 font-semibold sticky left-0 bg-slate-50 z-10">
+                  <th className="py-2 px-3 font-semibold sticky left-0 bg-slate-50 z-20 shadow-[1px_0_0_0_rgb(226_232_240)]">
                     <div className="text-xs uppercase tracking-wider text-slate-500">Nickname</div>
                     <div className="text-[10px] font-normal text-slate-400">Apodo</div>
                   </th>
@@ -432,7 +432,7 @@ export default function ReunionPlay() {
                       className={`border-b border-slate-100 ${isMe ? 'bg-brand-50' : ''}`}
                     >
                       <td
-                        className={`py-2 px-3 align-middle sticky left-0 ${
+                        className={`py-2 px-3 align-middle sticky left-0 z-10 shadow-[1px_0_0_0_rgb(226_232_240)] ${
                           isMe ? 'bg-brand-50' : 'bg-white'
                         }`}
                       >
