@@ -8,10 +8,10 @@ interface HistoryItem {
     raceNumber: number;
     result: any;
     horses: { id: number; name: string; number: number }[];
-    program: {
+    reunion: {
       id: number;
       name: string;
-      programDate: string;
+      reunionDate: string;
       racetrack: { name: string };
       week: { year: number; weekNumber: number };
     };
@@ -30,19 +30,18 @@ export default function MyHistory() {
   if (isLoading) return <p>Cargando...</p>;
   if (!data) return null;
 
-  // Group by program
-  const groupedByProgram = new Map<number, { program: any; items: HistoryItem[] }>();
+  // Group by reunion
+  const groupedByReunion = new Map<number, { reunion: any; items: HistoryItem[] }>();
   for (const it of data.items) {
-    const pid = it.race.program.id;
-    if (!groupedByProgram.has(pid)) {
-      groupedByProgram.set(pid, { program: it.race.program, items: [] });
+    const rid = it.race.reunion.id;
+    if (!groupedByReunion.has(rid)) {
+      groupedByReunion.set(rid, { reunion: it.race.reunion, items: [] });
     }
-    groupedByProgram.get(pid)!.items.push(it);
+    groupedByReunion.get(rid)!.items.push(it);
   }
-  // Sort by programDate desc
-  const groups = Array.from(groupedByProgram.values()).sort(
+  const groups = Array.from(groupedByReunion.values()).sort(
     (a, b) =>
-      new Date(b.program.programDate).getTime() - new Date(a.program.programDate).getTime(),
+      new Date(b.reunion.reunionDate).getTime() - new Date(a.reunion.reunionDate).getTime(),
   );
 
   const settled = data.items.filter((i) => i.score).length;
@@ -84,18 +83,18 @@ export default function MyHistory() {
         </div>
       )}
 
-      {groups.map(({ program, items }) => {
+      {groups.map(({ reunion, items }) => {
         const sum = items.reduce((a, x) => a + (x.score?.points || 0), 0);
         items.sort((a, b) => a.race.raceNumber - b.race.raceNumber);
         return (
-          <div key={program.id} className="card p-5 sm:p-6">
+          <div key={reunion.id} className="card p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between mb-4 pb-3 border-b border-slate-100 gap-2">
               <div>
                 <p className="text-xs uppercase font-bold text-brand-600 tracking-wider">
-                  🏟️ {program.racetrack.name}
+                  🏟️ {reunion.racetrack.name}
                 </p>
-                <h2 className="font-bold text-lg">{program.name}</h2>
-                <p className="text-xs text-slate-500">{formatDateTime(program.programDate)}</p>
+                <h2 className="font-bold text-lg">{reunion.name}</h2>
+                <p className="text-xs text-slate-500">{formatDateTime(reunion.reunionDate)}</p>
               </div>
               <span className="chip bg-brand-100 text-brand-700 text-sm">+{sum} pts</span>
             </div>

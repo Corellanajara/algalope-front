@@ -1,21 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../lib/api';
-import { Program, Race, RaceWeek } from '../../lib/types';
+import { Reunion, Race, RaceWeek } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
 
 export default function EnterResults() {
   const weeksQ = useQuery({
     queryKey: ['weeks'],
-    queryFn: async () => (await api.get<RaceWeek[]>('/programs/weeks')).data,
+    queryFn: async () => (await api.get<RaceWeek[]>('/reuniones/weeks')).data,
   });
   const [weekId, setWeekId] = useState<number | null>(null);
   const currentWeek = weekId ?? weeksQ.data?.[0]?.id ?? null;
 
-  const progsQ = useQuery({
-    queryKey: ['programs', 'byWeek', currentWeek],
+  const reunionesQ = useQuery({
+    queryKey: ['reuniones', 'byWeek', currentWeek],
     queryFn: async () =>
-      currentWeek ? (await api.get<Program[]>(`/programs?weekId=${currentWeek}`)).data : [],
+      currentWeek ? (await api.get<Reunion[]>(`/reuniones?weekId=${currentWeek}`)).data : [],
     enabled: !!currentWeek,
   });
 
@@ -38,35 +38,35 @@ export default function EnterResults() {
       </div>
 
       <div className="space-y-6">
-        {progsQ.data?.map((p) => (
-          <div key={p.id} className="card p-5 space-y-3">
+        {reunionesQ.data?.map((r) => (
+          <div key={r.id} className="card p-5 space-y-3">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs uppercase font-bold text-brand-600 tracking-wider">
-                  🏟️ {p.racetrack?.name}
+                  🏟️ {r.racetrack?.name}
                 </p>
-                <h2 className="font-bold text-lg">{p.name}</h2>
-                <p className="text-sm text-slate-500">{formatDateTime(p.programDate)}</p>
+                <h2 className="font-bold text-lg">{r.name}</h2>
+                <p className="text-sm text-slate-500">{formatDateTime(r.reunionDate)}</p>
               </div>
               <span
                 className={`chip ${
-                  p.status === 'SETTLED'
+                  r.status === 'SETTLED'
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                {p.status}
+                {r.status}
               </span>
             </div>
             <div className="space-y-3">
-              {p.races?.map((r) => (
-                <ResultForm key={r.id} race={r} />
+              {r.races?.map((rc) => (
+                <ResultForm key={rc.id} race={rc} />
               ))}
             </div>
           </div>
         ))}
-        {!progsQ.data?.length && (
-          <p className="text-slate-500 text-sm">No hay programas en esta semana.</p>
+        {!reunionesQ.data?.length && (
+          <p className="text-slate-500 text-sm">No hay reuniones en esta semana.</p>
         )}
       </div>
     </div>
@@ -84,10 +84,6 @@ function ResultForm({ race }: { race: Race }) {
 
   const mut = useMutation({
     mutationFn: async () => {
-      // The server requires three valid horse IDs from this race. When the race
-      // has fewer than 3 horses, fill missing slots with the highest-place horse
-      // already chosen — scoring uses the first matching position so duplicates
-      // award no extra points.
       const first = Number(form.firstHorseId);
       const second = Number(form.secondHorseId) || first;
       const third = Number(form.thirdHorseId) || second || first;
@@ -101,7 +97,7 @@ function ResultForm({ race }: { race: Race }) {
       ).data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['programs'] });
+      qc.invalidateQueries({ queryKey: ['reuniones'] });
       qc.invalidateQueries({ queryKey: ['leaderboard'] });
       qc.invalidateQueries({ queryKey: ['history'] });
     },

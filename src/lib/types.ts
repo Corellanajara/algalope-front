@@ -7,15 +7,15 @@ export interface RaceResult {
   winnerDividend: number; settledAt: string;
 }
 export interface Race {
-  id: number; programId: number; raceNumber: number;
+  id: number; reunionId: number; raceNumber: number;
   status: 'OPEN' | 'CLOSED' | 'SETTLED';
   horses?: Horse[];
   result?: RaceResult | null;
-  program?: Program;
+  reunion?: Reunion;
 }
-export interface Program {
+export interface Reunion {
   id: number; racetrackId: number; weekId: number;
-  name: string; programDate: string; deadline: string;
+  name: string; reunionDate: string; deadline: string;
   status: 'OPEN' | 'CLOSED' | 'SETTLED';
   racetrack?: Racetrack;
   week?: RaceWeek;
@@ -34,6 +34,13 @@ export interface LeaderEntry {
   user: { id: number; displayName: string; pseudonym?: string | null; email: string };
   points: number;
   races: number;
+}
+
+export interface Programa {
+  id: number; userId: number; weekId: number;
+  paid: boolean; paidAt: string | null; note: string | null;
+  user?: { id: number; displayName: string; email: string };
+  week?: RaceWeek;
 }
 
 export function displayUserName(u: {

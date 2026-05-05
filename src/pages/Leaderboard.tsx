@@ -1,27 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../lib/api';
-import { LeaderEntry, Program, RaceWeek } from '../lib/types';
+import { LeaderEntry, Reunion, RaceWeek } from '../lib/types';
 import { useAuth } from '../lib/auth';
 
 export default function Leaderboard() {
   const { user } = useAuth();
   const [weekId, setWeekId] = useState<'all' | number>('all');
-  const [programId, setProgramId] = useState<'all' | number>('all');
+  const [reunionId, setReunionId] = useState<'all' | number>('all');
 
   const weeks = useQuery({
     queryKey: ['weeks'],
-    queryFn: async () => (await api.get<RaceWeek[]>('/programs/weeks')).data,
+    queryFn: async () => (await api.get<RaceWeek[]>('/reuniones/weeks')).data,
   });
-  const programsQ = useQuery({
-    queryKey: ['programs', 'all-for-leaderboard'],
-    queryFn: async () => (await api.get<Program[]>('/programs')).data,
+  const reunionesQ = useQuery({
+    queryKey: ['reuniones', 'all-for-leaderboard'],
+    queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
   });
   const board = useQuery({
-    queryKey: ['leaderboard', weekId, programId],
+    queryKey: ['leaderboard', weekId, reunionId],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (programId !== 'all') params.set('programId', String(programId));
+      if (reunionId !== 'all') params.set('reunionId', String(reunionId));
       else if (weekId !== 'all') params.set('weekId', String(weekId));
       const q = params.toString() ? `?${params}` : '';
       return (await api.get<LeaderEntry[]>(`/leaderboard${q}`)).data;
@@ -32,8 +32,8 @@ export default function Leaderboard() {
   const rest = (board.data ?? []).slice(3);
 
   const subtitle =
-    programId !== 'all'
-      ? `Ranking del programa #${programId}`
+    reunionId !== 'all'
+      ? `Ranking de la reunión #${reunionId}`
       : weekId === 'all'
       ? 'Acumulado general'
       : 'Ranking de la semana';
@@ -49,23 +49,23 @@ export default function Leaderboard() {
         <div className="flex flex-wrap gap-2">
           <select
             className="input max-w-xs"
-            value={programId}
+            value={reunionId}
             onChange={(e) =>
-              setProgramId(e.target.value === 'all' ? 'all' : Number(e.target.value))
+              setReunionId(e.target.value === 'all' ? 'all' : Number(e.target.value))
             }
           >
-            <option value="all">Todos los programas</option>
-            {programsQ.data?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.racetrack?.name ? `${p.racetrack.name} · ` : ''}
-                {p.name}
+            <option value="all">Todas las reuniones</option>
+            {reunionesQ.data?.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.racetrack?.name ? `${r.racetrack.name} · ` : ''}
+                {r.name}
               </option>
             ))}
           </select>
           <select
             className="input max-w-xs"
             value={weekId}
-            disabled={programId !== 'all'}
+            disabled={reunionId !== 'all'}
             onChange={(e) => setWeekId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
           >
             <option value="all">Acumulado general</option>
@@ -169,7 +169,7 @@ function PodiumCard({
     },
     3: {
       icon: '🥉',
-      grad: 'from-orange-300 to-amber-500',
+      grad: 'from-orange-500 via-amber-600 to-orange-700',
       h: 'h-32',
       size: 'text-4xl',
     },

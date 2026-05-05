@@ -4,13 +4,14 @@ import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import ProgramPlay from './pages/ProgramPlay';
+import ReunionPlay from './pages/ReunionPlay';
 import MyHistory from './pages/MyHistory';
 import Leaderboard from './pages/Leaderboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import ManagePrograms from './pages/admin/ManagePrograms';
+import ManageReuniones from './pages/admin/ManageReuniones';
 import EnterResults from './pages/admin/EnterResults';
 import ManageUsers from './pages/admin/ManageUsers';
+import ManageProgramas from './pages/admin/ManageProgramas';
 
 export default function App() {
   return (
@@ -20,14 +21,15 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/programa/:id" element={<ProgramPlay />} />
+          <Route path="/reunion/:id" element={<ReunionPlay />} />
           <Route path="/historial" element={<MyHistory />} />
           <Route path="/ranking" element={<Leaderboard />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/programas" element={<ManagePrograms />} />
+            <Route path="/admin/reuniones" element={<ManageReuniones />} />
             <Route path="/admin/resultados" element={<EnterResults />} />
             <Route path="/admin/usuarios" element={<ManageUsers />} />
+            <Route path="/admin/programas" element={<ManageProgramas />} />
           </Route>
         </Route>
       </Route>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
-import { Program, Racetrack } from '../../lib/types';
+import { Reunion, Racetrack } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -18,102 +18,102 @@ interface DraftRace {
   horseCount: number;
 }
 
-export default function ManagePrograms() {
+export default function ManageReuniones() {
   const qc = useQueryClient();
   const tracksQ = useQuery({
     queryKey: ['racetracks'],
     queryFn: async () => (await api.get<Racetrack[]>('/racetracks')).data,
   });
-  const programsQ = useQuery({
-    queryKey: ['programs', 'all'],
-    queryFn: async () => (await api.get<Program[]>('/programs')).data,
+  const reunionesQ = useQuery({
+    queryKey: ['reuniones', 'all'],
+    queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
   });
 
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [editing, setEditing] = useState<Program | null>(null);
+  const [editing, setEditing] = useState<Reunion | null>(null);
 
   const delMut = useMutation({
-    mutationFn: async (id: number) => api.delete(`/programs/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
+    mutationFn: async (id: number) => api.delete(`/reuniones/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reuniones'] }),
   });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold">Programas</h1>
-          <p className="text-slate-600">Cada programa pertenece a un club con múltiples carreras.</p>
+          <h1 className="text-3xl font-extrabold">Reuniones</h1>
+          <p className="text-slate-600">Cada reunión pertenece a un club con múltiples carreras.</p>
         </div>
         <button onClick={() => setWizardOpen(true)} className="btn-primary">
-          + Nuevo programa
+          + Nueva reunión
         </button>
       </div>
 
       {wizardOpen && (
-        <ProgramWizard
+        <ReunionWizard
           tracks={tracksQ.data ?? []}
           onClose={() => setWizardOpen(false)}
           onCreated={() => {
-            qc.invalidateQueries({ queryKey: ['programs'] });
+            qc.invalidateQueries({ queryKey: ['reuniones'] });
             setWizardOpen(false);
           }}
         />
       )}
 
       {editing && (
-        <EditProgramModal
-          program={editing}
+        <EditReunionModal
+          reunion={editing}
           onClose={() => setEditing(null)}
           onSaved={() => {
-            qc.invalidateQueries({ queryKey: ['programs'] });
+            qc.invalidateQueries({ queryKey: ['reuniones'] });
             setEditing(null);
           }}
         />
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {programsQ.data?.length === 0 && (
+        {reunionesQ.data?.length === 0 && (
           <div className="card p-8 text-center col-span-full">
-            <p className="text-slate-600">No hay programas. Crea el primero.</p>
+            <p className="text-slate-600">No hay reuniones. Crea la primera.</p>
           </div>
         )}
-        {programsQ.data?.map((p) => (
-          <div key={p.id} className="card p-5">
+        {reunionesQ.data?.map((r) => (
+          <div key={r.id} className="card p-5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs uppercase font-bold text-brand-600 tracking-wider">
-                  🏟️ {p.racetrack?.name}
+                  🏟️ {r.racetrack?.name}
                 </p>
-                <h3 className="font-bold text-lg">{p.name}</h3>
-                <p className="text-sm text-slate-500">{formatDateTime(p.programDate)}</p>
-                <p className="text-xs text-slate-400">⏰ Cierre: {formatDateTime(p.deadline)}</p>
+                <h3 className="font-bold text-lg">{r.name}</h3>
+                <p className="text-sm text-slate-500">{formatDateTime(r.reunionDate)}</p>
+                <p className="text-xs text-slate-400">⏰ Cierre: {formatDateTime(r.deadline)}</p>
               </div>
               <span
                 className={`chip ${
-                  p.status === 'SETTLED'
+                  r.status === 'SETTLED'
                     ? 'bg-emerald-100 text-emerald-800'
-                    : p.status === 'CLOSED'
+                    : r.status === 'CLOSED'
                     ? 'bg-slate-200 text-slate-700'
                     : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                {p.status}
+                {r.status}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm text-slate-600">
-                {p.races?.length ?? 0} carrera{(p.races?.length ?? 0) === 1 ? '' : 's'}
+                {r.races?.length ?? 0} carrera{(r.races?.length ?? 0) === 1 ? '' : 's'}
               </span>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setEditing(p)}
+                  onClick={() => setEditing(r)}
                   className="text-brand-600 text-sm hover:underline"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`¿Eliminar "${p.name}"?`)) delMut.mutate(p.id);
+                    if (confirm(`¿Eliminar "${r.name}"?`)) delMut.mutate(r.id);
                   }}
                   className="text-red-600 text-sm hover:underline"
                 >
@@ -130,27 +130,27 @@ export default function ManagePrograms() {
 
 // --- Edit modal ---
 
-function EditProgramModal({
-  program,
+function EditReunionModal({
+  reunion,
   onClose,
   onSaved,
 }: {
-  program: Program;
+  reunion: Reunion;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: program.name,
-    programDate: toLocalInput(new Date(program.programDate)),
-    status: program.status,
+    name: reunion.name,
+    reunionDate: toLocalInput(new Date(reunion.reunionDate)),
+    status: reunion.status,
   });
 
   const updateMut = useMutation({
     mutationFn: async () =>
       (
-        await api.put(`/programs/${program.id}`, {
+        await api.put(`/reuniones/${reunion.id}`, {
           name: form.name,
-          programDate: new Date(form.programDate).toISOString(),
+          reunionDate: new Date(form.reunionDate).toISOString(),
           status: form.status,
         })
       ).data,
@@ -158,14 +158,14 @@ function EditProgramModal({
   });
 
   const nameTrimmed = form.name.trim();
-  const programDateValid = !Number.isNaN(new Date(form.programDate).getTime());
-  const computedDeadline = programDateValid
-    ? new Date(new Date(form.programDate).getTime() - ONE_HOUR_MS)
+  const reunionDateValid = !Number.isNaN(new Date(form.reunionDate).getTime());
+  const computedDeadline = reunionDateValid
+    ? new Date(new Date(form.reunionDate).getTime() - ONE_HOUR_MS)
     : null;
 
   const reasons: string[] = [];
   if (!nameTrimmed) reasons.push('El nombre no puede estar vacío.');
-  if (!programDateValid) reasons.push('La fecha y hora del programa son inválidas.');
+  if (!reunionDateValid) reasons.push('La fecha y hora de la reunión son inválidas.');
 
   const canSave = reasons.length === 0 && !updateMut.isPending;
 
@@ -173,7 +173,7 @@ function EditProgramModal({
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm grid place-items-center p-3 overflow-y-auto">
       <div className="card w-full max-w-lg overflow-hidden">
         <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold">Editar programa</h2>
+          <h2 className="text-xl font-bold">Editar reunión</h2>
           <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none">
             ×
           </button>
@@ -188,12 +188,12 @@ function EditProgramModal({
             />
           </div>
           <div>
-            <label className="label">📆 Fecha y hora del programa</label>
+            <label className="label">📆 Fecha y hora de la reunión</label>
             <input
               type="datetime-local"
               className="input"
-              value={form.programDate}
-              onChange={(e) => setForm({ ...form, programDate: e.target.value })}
+              value={form.reunionDate}
+              onChange={(e) => setForm({ ...form, reunionDate: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">
               ⏰ Cierre automático (1 h antes):{' '}
@@ -205,7 +205,7 @@ function EditProgramModal({
             <select
               className="input"
               value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as Program['status'] })}
+              onChange={(e) => setForm({ ...form, status: e.target.value as Reunion['status'] })}
             >
               <option value="OPEN">OPEN — abierto a selecciones</option>
               <option value="CLOSED">CLOSED — cerrado</option>
@@ -245,9 +245,9 @@ function EditProgramModal({
   );
 }
 
-// --- Wizard (simplified) ---
+// --- Wizard ---
 
-function ProgramWizard({
+function ReunionWizard({
   tracks,
   onClose,
   onCreated,
@@ -262,10 +262,13 @@ function ProgramWizard({
   const [meta, setMeta] = useState({
     racetrackId: 0,
     name: 'Reunión',
-    programDate: toLocalInput(new Date(now.getTime() + 2 * 86400000)),
+    reunionDate: toLocalInput(new Date(now.getTime() + 2 * 86400000)),
   });
 
-  // Start with a sensible default: 1 race, 12 horses each.
+  // Optional manual deadline override. If not used, deadline = reunionDate - 1h.
+  const [useCustomDeadline, setUseCustomDeadline] = useState(false);
+  const [customDeadline, setCustomDeadline] = useState('');
+
   const [raceCount, setRaceCount] = useState(1);
   const [defaultHorses, setDefaultHorses] = useState(12);
   const [races, setRaces] = useState<DraftRace[]>([{ raceNumber: 1, horseCount: 12 }]);
@@ -295,15 +298,29 @@ function ProgramWizard({
     setRaces(races.map((r, i) => (i === idx ? { ...r, horseCount: safe } : r)));
   }
 
-  const programDateValid = !Number.isNaN(new Date(meta.programDate).getTime());
-  const computedDeadline = programDateValid
-    ? new Date(new Date(meta.programDate).getTime() - ONE_HOUR_MS)
+  const reunionDateValid = !Number.isNaN(new Date(meta.reunionDate).getTime());
+  const autoDeadline = reunionDateValid
+    ? new Date(new Date(meta.reunionDate).getTime() - ONE_HOUR_MS)
     : null;
+  const customDeadlineDate = useCustomDeadline && customDeadline
+    ? new Date(customDeadline)
+    : null;
+  const effectiveDeadline = useCustomDeadline ? customDeadlineDate : autoDeadline;
 
   const meta1Reasons: string[] = [];
   if (meta.racetrackId <= 0) meta1Reasons.push('Selecciona un club hípico.');
-  if (meta.name.trim().length === 0) meta1Reasons.push('Escribe un nombre para el programa.');
-  if (!programDateValid) meta1Reasons.push('La fecha y hora del programa son inválidas.');
+  if (meta.name.trim().length === 0) meta1Reasons.push('Escribe un nombre para la reunión.');
+  if (!reunionDateValid) meta1Reasons.push('La fecha y hora de la reunión son inválidas.');
+  if (useCustomDeadline) {
+    if (!customDeadline || Number.isNaN(new Date(customDeadline).getTime())) {
+      meta1Reasons.push('La fecha de cierre personalizada es inválida.');
+    } else if (
+      reunionDateValid &&
+      new Date(customDeadline).getTime() >= new Date(meta.reunionDate).getTime()
+    ) {
+      meta1Reasons.push('El cierre debe ser anterior a la fecha de la reunión.');
+    }
+  }
   const meta1Valid = meta1Reasons.length === 0;
 
   const racesReasons: string[] = [];
@@ -317,18 +334,21 @@ function ProgramWizard({
   const totalHorses = races.reduce((a, r) => a + r.horseCount, 0);
 
   const createMut = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post('/programs', {
-          racetrackId: Number(meta.racetrackId),
-          name: meta.name,
-          programDate: new Date(meta.programDate).toISOString(),
-          races: races.map((r) => ({
-            raceNumber: r.raceNumber,
-            horseCount: r.horseCount,
-          })),
-        })
-      ).data,
+    mutationFn: async () => {
+      const body: any = {
+        racetrackId: Number(meta.racetrackId),
+        name: meta.name,
+        reunionDate: new Date(meta.reunionDate).toISOString(),
+        races: races.map((r) => ({
+          raceNumber: r.raceNumber,
+          horseCount: r.horseCount,
+        })),
+      };
+      if (useCustomDeadline && customDeadlineDate) {
+        body.deadline = customDeadlineDate.toISOString();
+      }
+      return (await api.post('/reuniones', body)).data as Reunion;
+    },
     onSuccess: () => onCreated(),
   });
 
@@ -338,7 +358,7 @@ function ProgramWizard({
         {/* Header + steps */}
         <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Nuevo programa</h2>
+            <h2 className="text-xl font-bold">Nueva reunión</h2>
             <button
               onClick={onClose}
               className="text-white/80 hover:text-white text-2xl leading-none"
@@ -401,7 +421,7 @@ function ProgramWizard({
                 </select>
               </div>
               <div>
-                <label className="label">Nombre del programa</label>
+                <label className="label">Nombre de la reunión</label>
                 <input
                   className="input"
                   value={meta.name}
@@ -410,17 +430,52 @@ function ProgramWizard({
                 />
               </div>
               <div>
-                <label className="label">📆 Fecha y hora del programa</label>
+                <label className="label">📆 Fecha y hora de la reunión</label>
                 <input
                   type="datetime-local"
                   className="input"
-                  value={meta.programDate}
-                  onChange={(e) => setMeta({ ...meta, programDate: e.target.value })}
+                  value={meta.reunionDate}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setMeta({ ...meta, reunionDate: v });
+                    if (!useCustomDeadline && !Number.isNaN(new Date(v).getTime())) {
+                      const def = new Date(new Date(v).getTime() - ONE_HOUR_MS);
+                      setCustomDeadline(toLocalInput(def));
+                    }
+                  }}
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   ⏰ Cierre automático (1 h antes):{' '}
-                  <b>{computedDeadline ? formatDateTime(computedDeadline) : '—'}</b>
+                  <b>{autoDeadline ? formatDateTime(autoDeadline) : '—'}</b>
                 </p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={useCustomDeadline}
+                    onChange={(e) => {
+                      setUseCustomDeadline(e.target.checked);
+                      if (e.target.checked && !customDeadline && autoDeadline) {
+                        setCustomDeadline(toLocalInput(autoDeadline));
+                      }
+                    }}
+                  />
+                  Personalizar fecha de cierre
+                </label>
+                {useCustomDeadline && (
+                  <div>
+                    <input
+                      type="datetime-local"
+                      className="input"
+                      value={customDeadline}
+                      onChange={(e) => setCustomDeadline(e.target.value)}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Por defecto se usa 1 h antes de la reunión.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -484,14 +539,15 @@ function ProgramWizard({
                   <b>Club:</b> {tracks.find((t) => t.id === meta.racetrackId)?.name}
                 </p>
                 <p>
-                  <b>Programa:</b> {meta.name}
+                  <b>Reunión:</b> {meta.name}
                 </p>
                 <p>
-                  <b>Fecha y hora:</b> {formatDateTime(meta.programDate)}
+                  <b>Fecha y hora:</b> {formatDateTime(meta.reunionDate)}
                 </p>
                 <p>
-                  <b>Cierre (auto):</b>{' '}
-                  {computedDeadline ? formatDateTime(computedDeadline) : '—'}
+                  <b>Cierre:</b>{' '}
+                  {effectiveDeadline ? formatDateTime(effectiveDeadline) : '—'}
+                  {useCustomDeadline ? ' (personalizado)' : ' (auto, 1 h antes)'}
                 </p>
                 <p>
                   <b>Carreras:</b> {races.length} · <b>Caballos totales:</b> {totalHorses}
@@ -560,7 +616,7 @@ function ProgramWizard({
                 title={[...meta1Reasons, ...racesReasons].join(' ') || undefined}
                 className="btn-primary"
               >
-                {createMut.isPending ? 'Creando...' : '✓ Crear programa'}
+                {createMut.isPending ? 'Creando...' : '✓ Crear reunión'}
               </button>
             )}
           </div>
@@ -571,10 +627,6 @@ function ProgramWizard({
 }
 
 // Numeric input that lets the user clear it freely while typing.
-// `value` is the canonical committed value from the parent. While focused, the
-// input keeps its own draft string (which can be empty or invalid), and only
-// commits to the parent on a valid number. On blur, an empty/out-of-range draft
-// is snapped back to the nearest in-range value.
 function IntInput({
   value,
   min,

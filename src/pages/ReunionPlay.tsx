@@ -1,31 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Program, Pick, PublicCartilla, displayUserName } from '../lib/types';
+import { Reunion, Pick, PublicCartilla, displayUserName } from '../lib/types';
 import Countdown from '../components/Countdown';
 import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../lib/auth';
 
-export default function ProgramPlay() {
+export default function ReunionPlay() {
   const { id } = useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
-  const programId = Number(id);
+  const reunionId = Number(id);
 
-  const progQ = useQuery({
-    queryKey: ['program', programId],
-    queryFn: async () => (await api.get<Program>(`/programs/${programId}`)).data,
+  const reunionQ = useQuery({
+    queryKey: ['reunion', reunionId],
+    queryFn: async () => (await api.get<Reunion>(`/reuniones/${reunionId}`)).data,
   });
   const picksQ = useQuery({
     queryKey: ['picks', 'me'],
     queryFn: async () => (await api.get<Pick[]>('/picks/me')).data,
   });
   const allPicksQ = useQuery({
-    queryKey: ['program', programId, 'all-picks'],
+    queryKey: ['reunion', reunionId, 'all-picks'],
     queryFn: async () =>
-      (await api.get<PublicCartilla[]>(`/programs/${programId}/picks`)).data,
+      (await api.get<PublicCartilla[]>(`/reuniones/${reunionId}/picks`)).data,
   });
 
   const [selections, setSelections] = useState<Record<number, number>>({});
@@ -33,8 +33,8 @@ export default function ProgramPlay() {
   const [currentStep, setCurrentStep] = useState(0);
 
   const myPicks = useMemo(
-    () => (picksQ.data ?? []).filter((p) => progQ.data?.races?.some((r) => r.id === p.raceId)),
-    [picksQ.data, progQ.data],
+    () => (picksQ.data ?? []).filter((p) => reunionQ.data?.races?.some((r) => r.id === p.raceId)),
+    [picksQ.data, reunionQ.data],
   );
 
   // Initialize from server picks once
@@ -52,22 +52,22 @@ export default function ProgramPlay() {
         raceId: Number(raceId),
         horseId: Number(horseId),
       }));
-      return (await api.post(`/programs/${programId}/picks`, { picks })).data;
+      return (await api.post(`/reuniones/${reunionId}/picks`, { picks })).data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['picks'] });
-      qc.invalidateQueries({ queryKey: ['program', programId, 'all-picks'] });
+      qc.invalidateQueries({ queryKey: ['reunion', reunionId, 'all-picks'] });
       setToast('✓ Cartilla guardada');
       setTimeout(() => setToast(null), 2800);
     },
   });
 
-  if (progQ.isLoading) return <p>Cargando cartilla...</p>;
-  if (!progQ.data) return <p>Programa no encontrado.</p>;
+  if (reunionQ.isLoading) return <p>Cargando cartilla...</p>;
+  if (!reunionQ.data) return <p>Reunión no encontrada.</p>;
 
-  const prog = progQ.data;
-  const races = prog.races ?? [];
-  const expired = timeLeftMs(prog.deadline) <= 0 || prog.status !== 'OPEN';
+  const reunion = reunionQ.data;
+  const races = reunion.races ?? [];
+  const expired = timeLeftMs(reunion.deadline) <= 0 || reunion.status !== 'OPEN';
   const done = races.filter((r) => selections[r.id]).length;
   const progress = races.length ? Math.round((done / races.length) * 100) : 0;
   const ready = done === races.length && races.length > 0;
@@ -79,7 +79,7 @@ export default function ProgramPlay() {
         to="/"
         className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-brand-600 font-medium"
       >
-        ← Volver a programas
+        ← Volver a reuniones
       </Link>
 
       {/* Hero */}
@@ -87,14 +87,14 @@ export default function ProgramPlay() {
         <div className="absolute -right-4 -bottom-4 text-[160px] opacity-10 select-none">🏇</div>
         <div className="relative">
           <p className="text-white/80 text-xs uppercase tracking-widest font-bold">
-            🏟️ {prog.racetrack?.name}
+            🏟️ {reunion.racetrack?.name}
           </p>
-          <h1 className="text-3xl sm:text-4xl font-extrabold mt-1">{prog.name}</h1>
-          <p className="text-white/80 mt-1">{formatDate(prog.programDate)}</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold mt-1">{reunion.name}</h1>
+          <p className="text-white/80 mt-1">{formatDate(reunion.reunionDate)}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-2">
-              <span className="text-xs">⏰ Deadline: {formatDateTime(prog.deadline)}</span>
-              <Countdown to={prog.deadline} />
+              <span className="text-xs">⏰ Deadline: {formatDateTime(reunion.deadline)}</span>
+              <Countdown to={reunion.deadline} />
             </div>
           </div>
         </div>
@@ -280,7 +280,7 @@ export default function ProgramPlay() {
         {allPicksQ.isLoading ? (
           <p className="text-sm text-slate-500">Cargando cartillas…</p>
         ) : (allPicksQ.data?.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-500">Aún no hay cartillas registradas para este programa.</p>
+          <p className="text-sm text-slate-500">Aún no hay cartillas registradas para esta reunión.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -337,7 +337,7 @@ export default function ProgramPlay() {
                                     : 'bg-slate-50 text-slate-600 border border-slate-200'
                                 }`}
                               >
-                                #{pick.horse.number} {pick.horse.name}
+                                {pick.horse.name}
                                 {place === 1 ? ' 🥇' : place === 2 ? ' 🥈' : place === 3 ? ' 🥉' : ''}
                               </span>
                             ) : (
@@ -363,7 +363,7 @@ export default function ProgramPlay() {
               {ready ? '🎉 Cartilla lista' : `Faltan ${races.length - done} carrera${races.length - done === 1 ? '' : 's'} por elegir`}
             </p>
             <p className="text-sm font-semibold truncate">
-              {prog.racetrack?.name} · {prog.name}
+              {reunion.racetrack?.name} · {reunion.name}
             </p>
           </div>
           {expired ? (

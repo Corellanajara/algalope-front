@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { api } from '../lib/api';
-import { Program, Pick, Racetrack } from '../lib/types';
+import { Reunion, Pick, Racetrack } from '../lib/types';
 import Countdown from '../components/Countdown';
 import { formatDate, formatDateTime, timeLeftMs } from '../lib/utils';
 import { useAuth } from '../lib/auth';
@@ -14,9 +14,9 @@ export default function Dashboard() {
   const [racetrackId, setRacetrackId] = useState<number | 'all'>('all');
   const [filter, setFilter] = useState<Filter>('all');
 
-  const programsQ = useQuery({
-    queryKey: ['programs', 'current'],
-    queryFn: async () => (await api.get<Program[]>('/programs?current=1')).data,
+  const reunionesQ = useQuery({
+    queryKey: ['reuniones', 'current'],
+    queryFn: async () => (await api.get<Reunion[]>('/reuniones?current=1')).data,
   });
   const picksQ = useQuery({
     queryKey: ['picks', 'me'],
@@ -37,26 +37,26 @@ export default function Dashboard() {
     [picksQ.data],
   );
 
-  const programs = programsQ.data ?? [];
-  const enriched = programs.map((p) => {
-    const total = p.races?.length ?? 0;
-    const doneCount = (p.races ?? []).filter((r) => picksByRace.has(r.id)).length;
-    const expired = timeLeftMs(p.deadline) <= 0 || p.status !== 'OPEN';
-    return { p, total, doneCount, expired };
+  const reuniones = reunionesQ.data ?? [];
+  const enriched = reuniones.map((r) => {
+    const total = r.races?.length ?? 0;
+    const doneCount = (r.races ?? []).filter((rc) => picksByRace.has(rc.id)).length;
+    const expired = timeLeftMs(r.deadline) <= 0 || r.status !== 'OPEN';
+    return { r, total, doneCount, expired };
   });
 
-  const filtered = enriched.filter(({ p, expired, doneCount, total }) => {
-    if (racetrackId !== 'all' && p.racetrackId !== racetrackId) return false;
+  const filtered = enriched.filter(({ r, expired, doneCount, total }) => {
+    if (racetrackId !== 'all' && r.racetrackId !== racetrackId) return false;
     if (filter === 'open' && expired) return false;
     if (filter === 'pending' && (expired || doneCount === total)) return false;
-    if (filter === 'settled' && p.status !== 'SETTLED') return false;
+    if (filter === 'settled' && r.status !== 'SETTLED') return false;
     return true;
   });
 
-  const openPrograms = enriched.filter((e) => !e.expired).length;
+  const openReuniones = enriched.filter((e) => !e.expired).length;
   const pending = enriched.filter((e) => !e.expired && e.doneCount < e.total).length;
 
-  if (programsQ.isLoading) {
+  if (reunionesQ.isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2">
         {[1, 2, 3, 4].map((i) => (
@@ -66,11 +66,11 @@ export default function Dashboard() {
     );
   }
 
-  if (programsQ.isError) {
-    const err = programsQ.error as any;
+  if (reunionesQ.isError) {
+    const err = reunionesQ.error as any;
     return (
       <div className="card p-6 border-2 border-red-200 bg-red-50">
-        <h2 className="font-bold text-red-800">No se pudieron cargar los programas</h2>
+        <h2 className="font-bold text-red-800">No se pudieron cargar las reuniones</h2>
         <p className="text-sm text-red-700 mt-1">
           {err?.response?.data?.error || err?.message || 'Error desconocido'}
         </p>
@@ -78,7 +78,7 @@ export default function Dashboard() {
           Verifica que el backend esté corriendo en <code>http://localhost:4000</code> (usa{' '}
           <code>npm run dev</code>).
         </p>
-        <button onClick={() => programsQ.refetch()} className="btn-primary mt-3 text-sm">
+        <button onClick={() => reunionesQ.refetch()} className="btn-primary mt-3 text-sm">
           Reintentar
         </button>
       </div>
@@ -95,10 +95,10 @@ export default function Dashboard() {
             ¡Bienvenido, {user?.displayName}!
           </p>
           <h1 className="text-3xl sm:text-4xl font-extrabold mt-1">
-            Programas hípicos
+            Reuniones hípicas
           </h1>
           <p className="text-white/80 mt-2 max-w-lg">
-            Cada programa pertenece a un club hípico. Debes completar <b>toda la cartilla</b> antes
+            Cada reunión pertenece a un club hípico. Debes completar <b>toda la cartilla</b> antes
             del deadline para participar.
           </p>
         </div>
@@ -106,8 +106,8 @@ export default function Dashboard() {
 
       {/* Stats */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon="📅" label="Programas" value={programs.length} tint="slate" />
-        <StatCard icon="🟢" label="Abiertos" value={openPrograms} tint="emerald" />
+        <StatCard icon="📅" label="Reuniones" value={reuniones.length} tint="slate" />
+        <StatCard icon="🟢" label="Abiertas" value={openReuniones} tint="emerald" />
         <StatCard icon="⏳" label="Pendientes" value={pending} tint="amber" />
         <StatCard icon="🏆" label="Puntos totales" value={history.data?.totalPoints ?? 0} tint="brand" />
       </section>
@@ -132,10 +132,10 @@ export default function Dashboard() {
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
           {(
             [
-              ['all', 'Todos'],
-              ['open', 'Abiertos'],
+              ['all', 'Todas'],
+              ['open', 'Abiertas'],
               ['pending', 'Pendientes'],
-              ['settled', 'Finalizados'],
+              ['settled', 'Finalizadas'],
             ] as [Filter, string][]
           ).map(([v, l]) => (
             <button
@@ -150,25 +150,25 @@ export default function Dashboard() {
           ))}
         </div>
         <span className="ml-auto text-sm text-slate-500">
-          {filtered.length} / {programs.length} programa{programs.length === 1 ? '' : 's'}
+          {filtered.length} / {reuniones.length} reuni{reuniones.length === 1 ? 'ón' : 'ones'}
         </span>
       </section>
 
-      {/* Programs */}
+      {/* Reuniones */}
       {filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-6xl mb-3">🔍</div>
           <h2 className="text-xl font-bold">Sin resultados</h2>
           <p className="text-slate-600 mt-2">
-            {programs.length === 0
-              ? 'Aún no hay programas cargados. Avisa al administrador.'
-              : 'No hay programas que coincidan con estos filtros.'}
+            {reuniones.length === 0
+              ? 'Aún no hay reuniones cargadas. Avisa al administrador.'
+              : 'No hay reuniones que coincidan con estos filtros.'}
           </p>
         </div>
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
-          {filtered.map(({ p, total, doneCount, expired }) => (
-            <ProgramCard key={p.id} p={p} total={total} doneCount={doneCount} expired={expired} />
+          {filtered.map(({ r, total, doneCount, expired }) => (
+            <ReunionCard key={r.id} r={r} total={total} doneCount={doneCount} expired={expired} />
           ))}
         </section>
       )}
@@ -202,32 +202,32 @@ function StatCard({
   );
 }
 
-function ProgramCard({
-  p,
+function ReunionCard({
+  r,
   total,
   doneCount,
   expired,
 }: {
-  p: Program;
+  r: Reunion;
   total: number;
   doneCount: number;
   expired: boolean;
 }) {
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-  const settled = p.status === 'SETTLED';
+  const settled = r.status === 'SETTLED';
   const complete = doneCount === total && total > 0;
 
   return (
-    <Link to={`/programa/${p.id}`} className="card-hover p-5 block group">
+    <Link to={`/reunion/${r.id}`} className="card-hover p-5 block group">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider text-brand-600">
-            🏟️ {p.racetrack?.name}
+            🏟️ {r.racetrack?.name}
           </p>
-          <h3 className="font-bold text-lg mt-0.5 truncate">{p.name}</h3>
-          <p className="text-sm text-slate-500">{formatDate(p.programDate)}</p>
+          <h3 className="font-bold text-lg mt-0.5 truncate">{r.name}</h3>
+          <p className="text-sm text-slate-500">{formatDate(r.reunionDate)}</p>
         </div>
-        <Countdown to={p.deadline} />
+        <Countdown to={r.deadline} />
       </div>
 
       <div className="mt-4">
@@ -252,7 +252,7 @@ function ProgramCard({
       </div>
 
       <div className="mt-3 text-xs text-slate-500">
-        ⏰ Cierre: {formatDateTime(p.deadline)}
+        ⏰ Cierre: {formatDateTime(r.deadline)}
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -260,7 +260,7 @@ function ProgramCard({
           {total} carrera{total === 1 ? '' : 's'}
         </span>
         {settled ? (
-          <span className="chip bg-slate-200 text-slate-700">✓ Finalizado</span>
+          <span className="chip bg-slate-200 text-slate-700">✓ Finalizada</span>
         ) : expired ? (
           complete ? (
             <span className="chip bg-emerald-100 text-emerald-800">✓ Cartilla completa</span>
