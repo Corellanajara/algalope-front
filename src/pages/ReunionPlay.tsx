@@ -401,23 +401,29 @@ export default function ReunionPlay() {
         ) : (allPicksQ.data?.length ?? 0) === 0 ? (
           <p className="text-sm text-slate-500">Aún no hay cartillas registradas para esta reunión.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="text-left border-b-2 border-slate-200 bg-slate-50">
-                  <th className="py-2 px-3 font-semibold sticky left-0 bg-slate-50 z-20 shadow-[1px_0_0_0_rgb(226_232_240)]">
-                    <div className="text-xs uppercase tracking-wider text-slate-500">Nickname</div>
-                    <div className="text-[10px] font-normal text-slate-400">Apodo</div>
+                <tr className="border-b-2 border-slate-200 bg-slate-50">
+                  <th className="py-3 px-4 font-semibold text-left sticky left-0 bg-slate-50 z-20 shadow-[1px_0_0_0_rgb(226_232_240)]">
+                    <div className="text-xs uppercase tracking-wider text-slate-600 text-center">
+                      Nickname
+                    </div>
+                    <div className="text-[10px] font-normal text-slate-400 text-center">
+                      Apodo
+                    </div>
                   </th>
                   {races.map((r) => (
                     <th
                       key={r.id}
-                      className="py-2 px-2 font-semibold whitespace-nowrap text-center"
+                      className="py-3 px-3 font-semibold text-center whitespace-nowrap text-xs uppercase tracking-wider text-slate-600"
                     >
                       C.{r.raceNumber}
                     </th>
                   ))}
-                  <th className="py-2 px-3 font-semibold text-right">Puntaje</th>
+                  <th className="py-3 px-4 font-semibold text-center text-xs uppercase tracking-wider text-slate-600">
+                    Puntaje
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -429,10 +435,12 @@ export default function ReunionPlay() {
                   return (
                     <tr
                       key={c.user.id}
-                      className={`border-b border-slate-100 ${isMe ? 'bg-brand-50' : ''}`}
+                      className={`border-b border-slate-100 hover:bg-slate-50/60 transition ${
+                        isMe ? 'bg-brand-50' : ''
+                      }`}
                     >
                       <td
-                        className={`py-2 px-3 align-middle sticky left-0 z-10 shadow-[1px_0_0_0_rgb(226_232_240)] ${
+                        className={`py-3 px-4 align-middle sticky left-0 z-10 shadow-[1px_0_0_0_rgb(226_232_240)] ${
                           isMe ? 'bg-brand-50' : 'bg-white'
                         }`}
                       >
@@ -464,7 +472,7 @@ export default function ReunionPlay() {
                             : null
                           : null;
                         return (
-                          <td key={r.id} className="py-2 px-2 whitespace-nowrap text-center align-middle">
+                          <td key={r.id} className="py-3 px-3 whitespace-nowrap text-center align-middle">
                             {pick ? (
                               <span
                                 className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
@@ -486,7 +494,7 @@ export default function ReunionPlay() {
                           </td>
                         );
                       })}
-                      <td className="py-2 px-3 text-right font-extrabold text-brand-600 tabular-nums align-middle">
+                      <td className="py-3 px-4 text-center font-extrabold text-brand-600 tabular-nums align-middle">
                         {points}
                       </td>
                     </tr>
