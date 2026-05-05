@@ -260,9 +260,9 @@ function ReunionCard({
         ⏰ Cierre: {formatDateTime(r.deadline)}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-xs text-slate-500">
-          {total} carrera{total === 1 ? '' : 's'}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+        <span className="chip bg-slate-100 text-slate-700">
+          📋 {r.cartillasCount ?? 0} cartilla{(r.cartillasCount ?? 0) === 1 ? '' : 's'} enviada{(r.cartillasCount ?? 0) === 1 ? '' : 's'}
         </span>
         {settled ? (
           <span className="chip bg-slate-200 text-slate-700">✓ Finalizada</span>

@@ -20,6 +20,7 @@ export interface Reunion {
   racetrack?: Racetrack;
   week?: RaceWeek;
   races?: Race[];
+  cartillasCount?: number;
 }
 export interface Pick {
   id: number; userId: number; raceId: number; horseId: number;
