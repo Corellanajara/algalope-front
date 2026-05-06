@@ -368,9 +368,6 @@ export default function ReunionPlay() {
                         <p className="text-xs text-slate-500">Pago estimado {h.odds}x</p>
                       )}
                     </div>
-                    {h.isFavorite && (
-                      <span className="chip bg-amber-100 text-amber-800">⭐ Favorito</span>
-                    )}
                     {h.isScratched && (
                       <span className="chip bg-slate-200 text-slate-600">🚫 Fuera</span>
                     )}

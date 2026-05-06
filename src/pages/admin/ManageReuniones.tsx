@@ -16,6 +16,7 @@ function toLocalInput(d: Date) {
 interface DraftRace {
   raceNumber: number;
   horseCount: number;
+  favoriteNumber?: number | null;
 }
 
 export default function ManageReuniones() {
@@ -407,7 +408,17 @@ function ReunionWizard({
 
   function setHorsesForRace(idx: number, n: number) {
     const safe = Math.max(2, Math.min(30, n));
-    setRaces(races.map((r, i) => (i === idx ? { ...r, horseCount: safe } : r)));
+    setRaces(
+      races.map((r, i) => {
+        if (i !== idx) return r;
+        const fav = r.favoriteNumber && r.favoriteNumber <= safe ? r.favoriteNumber : null;
+        return { ...r, horseCount: safe, favoriteNumber: fav };
+      }),
+    );
+  }
+
+  function setFavoriteForRace(idx: number, n: number | null) {
+    setRaces(races.map((r, i) => (i === idx ? { ...r, favoriteNumber: n } : r)));
   }
 
   const reunionDateValid = !Number.isNaN(new Date(meta.reunionDate).getTime());
@@ -454,6 +465,7 @@ function ReunionWizard({
         races: races.map((r) => ({
           raceNumber: r.raceNumber,
           horseCount: r.horseCount,
+          favoriteNumber: r.favoriteNumber ?? undefined,
         })),
       };
       if (useCustomDeadline && customDeadlineDate) {
@@ -624,18 +636,40 @@ function ReunionWizard({
                 {races.map((r, idx) => (
                   <div
                     key={idx}
-                    className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3"
+                    className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap"
                   >
                     <span className="font-semibold text-sm">🏁 Carrera {r.raceNumber}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">caballos:</span>
-                      <IntInput
-                        value={r.horseCount}
-                        min={2}
-                        max={30}
-                        className="max-w-[90px]"
-                        onCommit={(n) => setHorsesForRace(idx, n)}
-                      />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500">caballos:</span>
+                        <IntInput
+                          value={r.horseCount}
+                          min={2}
+                          max={30}
+                          className="max-w-[90px]"
+                          onCommit={(n) => setHorsesForRace(idx, n)}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500">⭐ favorito #:</span>
+                        <select
+                          className="input max-w-[110px] py-1.5 text-sm"
+                          value={r.favoriteNumber ?? ''}
+                          onChange={(e) =>
+                            setFavoriteForRace(
+                              idx,
+                              e.target.value === '' ? null : Number(e.target.value),
+                            )
+                          }
+                        >
+                          <option value="">— sin favorito —</option>
+                          {Array.from({ length: r.horseCount }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n}>
+                              #{n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 ))}
