@@ -328,8 +328,9 @@ export default function ReunionPlay() {
               return (
                 <button
                   key={h.id}
-                  disabled={expired}
+                  disabled={expired || h.isScratched}
                   onClick={() => {
+                    if (h.isScratched) return;
                     setSelections({ ...selections, [currentRace.id]: h.id });
                     // Auto-advance to next unselected race for smoother flow
                     setTimeout(() => {
@@ -343,7 +344,9 @@ export default function ReunionPlay() {
                     isSel
                       ? 'border-brand-500 bg-brand-50 shadow-lg scale-[1.01]'
                       : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-md'
-                  } ${expired ? 'cursor-not-allowed opacity-80' : ''}`}
+                  } ${expired ? 'cursor-not-allowed opacity-80' : ''} ${
+                    h.isScratched ? 'opacity-60' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -354,11 +357,23 @@ export default function ReunionPlay() {
                       {h.number}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 truncate">{h.name}</p>
+                      <p
+                        className={`font-bold text-slate-900 truncate ${
+                          h.isScratched ? 'line-through' : ''
+                        }`}
+                      >
+                        {h.name}
+                      </p>
                       {h.odds != null && (
                         <p className="text-xs text-slate-500">Pago estimado {h.odds}x</p>
                       )}
                     </div>
+                    {h.isFavorite && (
+                      <span className="chip bg-amber-100 text-amber-800">⭐ Favorito</span>
+                    )}
+                    {h.isScratched && (
+                      <span className="chip bg-slate-200 text-slate-600">🚫 Fuera</span>
+                    )}
                     {isSel && <span className="chip bg-brand-600 text-white">✓</span>}
                     {place && (
                       <span
@@ -491,12 +506,23 @@ export default function ReunionPlay() {
                       {races.map((r) => {
                         const pick = c.picks.find((p) => p.raceId === r.id);
                         const res = r.result;
-                        const place = pick && res
-                          ? pick.horseId === res.firstHorseId
+                        const favorite = r.horses?.find((h) => h.isFavorite && !h.isScratched);
+                        const pickedHorse = pick
+                          ? r.horses?.find((h) => h.id === pick.horseId) ?? pick.horse
+                          : null;
+                        const redirected =
+                          !!pick && !!pickedHorse?.isScratched && !!favorite;
+                        const effectiveId = redirected
+                          ? favorite!.id
+                          : pick
+                          ? pick.horseId
+                          : null;
+                        const place = effectiveId != null && res
+                          ? effectiveId === res.firstHorseId
                             ? 1
-                            : pick.horseId === res.secondHorseId
+                            : effectiveId === res.secondHorseId
                             ? 2
-                            : pick.horseId === res.thirdHorseId
+                            : effectiveId === res.thirdHorseId
                             ? 3
                             : null
                           : null;
@@ -513,8 +539,18 @@ export default function ReunionPlay() {
                                     ? 'bg-orange-100 text-orange-800'
                                     : 'bg-slate-50 text-slate-600 border border-slate-200'
                                 }`}
+                                title={
+                                  redirected
+                                    ? `Caballo dado de baja — puntaje del favorito ${favorite!.name}`
+                                    : undefined
+                                }
                               >
-                                {pick.horse.name}
+                                <span className={redirected ? 'line-through opacity-70' : ''}>
+                                  {pick.horse.name}
+                                </span>
+                                {redirected && (
+                                  <span className="text-slate-500">→ ⭐ {favorite!.name}</span>
+                                )}
                                 {place === 1 ? ' 🥇' : place === 2 ? ' 🥈' : place === 3 ? ' 🥉' : ''}
                               </span>
                             ) : (

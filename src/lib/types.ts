@@ -1,6 +1,14 @@
 export interface Racetrack { id: number; name: string; city: string; }
 export interface RaceWeek { id: number; year: number; weekNumber: number; startDate: string; endDate: string; }
-export interface Horse { id: number; raceId: number; number: number; name: string; odds: number | null; }
+export interface Horse {
+  id: number;
+  raceId: number;
+  number: number;
+  name: string;
+  odds: number | null;
+  isFavorite?: boolean;
+  isScratched?: boolean;
+}
 export interface RaceResult {
   id: number; raceId: number;
   firstHorseId: number; secondHorseId: number; thirdHorseId: number;

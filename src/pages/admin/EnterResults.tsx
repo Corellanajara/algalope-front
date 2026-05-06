@@ -144,6 +144,8 @@ function ResultForm({ race }: { race: Race }) {
           <span className="chip bg-emerald-100 text-emerald-800">✓ Con resultado</span>
         )}
       </div>
+      <HorsesAdminPanel race={race} />
+      <div className="h-px bg-slate-200 my-3" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {(['firstHorseId', 'secondHorseId', 'thirdHorseId'] as const).map((f, i) => {
           const optional = i + 1 > uniqueNeeded;
@@ -202,6 +204,95 @@ function ResultForm({ race }: { race: Race }) {
             <li key={r}>⚠️ {r}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function HorsesAdminPanel({ race }: { race: Race }) {
+  const qc = useQueryClient();
+  const horses = race.horses ?? [];
+  const favoriteId = horses.find((h) => h.isFavorite)?.id ?? null;
+
+  const setFavoriteMut = useMutation({
+    mutationFn: async (horseId: number | null) =>
+      (await api.post(`/races/${race.id}/favorite`, { horseId })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reuniones'] });
+      qc.invalidateQueries({ queryKey: ['leaderboard'] });
+      qc.invalidateQueries({ queryKey: ['history'] });
+    },
+  });
+
+  const scratchMut = useMutation({
+    mutationFn: async (vars: { horseId: number; scratched: boolean }) =>
+      (await api.post(`/races/horses/${vars.horseId}/scratch`, {
+        scratched: vars.scratched,
+      })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reuniones'] });
+      qc.invalidateQueries({ queryKey: ['leaderboard'] });
+      qc.invalidateQueries({ queryKey: ['history'] });
+    },
+  });
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs uppercase tracking-wider font-semibold text-slate-500">
+        Caballos · favorito y bajas
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+        {horses.map((h) => (
+          <div
+            key={h.id}
+            className={`flex items-center gap-2 px-2 py-1 rounded-lg ${
+              h.isScratched ? 'bg-slate-100' : 'bg-white border border-slate-200'
+            }`}
+          >
+            <span className="w-6 text-xs text-slate-500 tabular-nums">#{h.number}</span>
+            <span
+              className={`flex-1 text-sm truncate ${
+                h.isScratched ? 'line-through text-slate-500' : ''
+              }`}
+            >
+              {h.name}
+            </span>
+            <label
+              className="text-xs flex items-center gap-1 cursor-pointer select-none"
+              title="Marcar como favorito (uno por carrera)"
+            >
+              <input
+                type="radio"
+                name={`fav-${race.id}`}
+                checked={favoriteId === h.id}
+                onChange={() => setFavoriteMut.mutate(h.id)}
+              />
+              ⭐
+            </label>
+            <label
+              className="text-xs flex items-center gap-1 cursor-pointer select-none"
+              title="Caballo dado de baja"
+            >
+              <input
+                type="checkbox"
+                checked={!!h.isScratched}
+                onChange={(e) =>
+                  scratchMut.mutate({ horseId: h.id, scratched: e.target.checked })
+                }
+              />
+              🚫
+            </label>
+          </div>
+        ))}
+      </div>
+      {favoriteId != null && (
+        <button
+          type="button"
+          onClick={() => setFavoriteMut.mutate(null)}
+          className="text-xs text-slate-500 hover:underline mt-1"
+        >
+          Quitar favorito
+        </button>
       )}
     </div>
   );
