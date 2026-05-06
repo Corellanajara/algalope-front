@@ -183,15 +183,15 @@ function EditReunionModal({
   const canSave = reasons.length === 0 && !updateMut.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm grid place-items-center p-3 overflow-y-auto">
-      <div className="card w-full max-w-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-3">
+      <div className="card w-full max-w-lg max-h-[calc(100vh-1.5rem)] flex flex-col overflow-hidden">
+        <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5 flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold">Editar reunión</h2>
           <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none">
             ×
           </button>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div>
             <label className="label">Nombre</label>
             <input
@@ -247,7 +247,7 @@ function EditReunionModal({
             </p>
           )}
         </div>
-        <div className="border-t border-slate-100 p-4 bg-slate-50 space-y-2">
+        <div className="border-t border-slate-100 p-4 bg-slate-50 space-y-2 shrink-0">
           {reasons.length > 0 && (
             <ul className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-0.5">
               {reasons.map((r) => (
@@ -504,10 +504,10 @@ function ReunionWizard({
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm grid place-items-start sm:place-items-center p-3 overflow-y-auto">
-      <div className="card w-full max-w-3xl my-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-3">
+      <div className="card w-full max-w-3xl max-h-[calc(100vh-1.5rem)] flex flex-col overflow-hidden">
         {/* Header + steps */}
-        <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5">
+        <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-5 shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">Nueva reunión</h2>
             <button
@@ -553,7 +553,7 @@ function ReunionWizard({
         </div>
 
         {/* Body */}
-        <div className="p-5 max-h-[70vh] overflow-y-auto">
+        <div className="p-5 overflow-y-auto flex-1 min-h-0">
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -734,7 +734,7 @@ function ReunionWizard({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 p-4 bg-slate-50 space-y-2">
+        <div className="border-t border-slate-100 p-4 bg-slate-50 space-y-2 shrink-0">
           {(() => {
             const activeReasons =
               step === 1
