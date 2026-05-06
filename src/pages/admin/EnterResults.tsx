@@ -209,13 +209,13 @@ function ResultForm({ race }: { race: Race }) {
   );
 }
 
-function HorsesAdminPanel({ race }: { race: Race }) {
+export function HorsesAdminPanel({ race }: { race: Race }) {
   const qc = useQueryClient();
   const horses = race.horses ?? [];
   const favoriteId = horses.find((h) => h.isFavorite)?.id ?? null;
 
   const setFavoriteMut = useMutation({
-    mutationFn: async (horseId: number | null) =>
+    mutationFn: async (horseId: number) =>
       (await api.post(`/races/${race.id}/favorite`, { horseId })).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reuniones'] });
@@ -285,14 +285,15 @@ function HorsesAdminPanel({ race }: { race: Race }) {
           </div>
         ))}
       </div>
-      {favoriteId != null && (
-        <button
-          type="button"
-          onClick={() => setFavoriteMut.mutate(null)}
-          className="text-xs text-slate-500 hover:underline mt-1"
-        >
-          Quitar favorito
-        </button>
+      {setFavoriteMut.isError && (
+        <p className="text-xs text-red-700 mt-1">
+          {(setFavoriteMut.error as any)?.response?.data?.error || 'No se pudo cambiar el favorito'}
+        </p>
+      )}
+      {scratchMut.isError && (
+        <p className="text-xs text-red-700 mt-1">
+          {(scratchMut.error as any)?.response?.data?.error || 'No se pudo actualizar el caballo'}
+        </p>
       )}
     </div>
   );

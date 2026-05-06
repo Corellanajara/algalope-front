@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { Reunion, Racetrack } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
+import { HorsesAdminPanel } from './EnterResults';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -16,7 +17,7 @@ function toLocalInput(d: Date) {
 interface DraftRace {
   raceNumber: number;
   horseCount: number;
-  favoriteNumber?: number | null;
+  favoriteNumber: number;
 }
 
 export default function ManageReuniones() {
@@ -151,6 +152,12 @@ function EditReunionModal({
     status: reunion.status,
   });
 
+  const fullReunionQ = useQuery({
+    queryKey: ['reunion', reunion.id, 'edit'],
+    queryFn: async () => (await api.get<Reunion>(`/reuniones/${reunion.id}`)).data,
+  });
+  const races = fullReunionQ.data?.races ?? reunion.races ?? [];
+
   const updateMut = useMutation({
     mutationFn: async () =>
       (
@@ -219,6 +226,21 @@ function EditReunionModal({
             </select>
           </div>
           <ReunionPdfManager reunion={reunion} />
+          <div className="border-t border-slate-100 pt-3">
+            <p className="label mb-2">Caballos por carrera</p>
+            {races.length === 0 ? (
+              <p className="text-sm text-slate-500">Cargando carreras…</p>
+            ) : (
+              <div className="space-y-3">
+                {races.map((r) => (
+                  <div key={r.id} className="bg-slate-50 rounded-xl p-3">
+                    <p className="font-semibold text-sm mb-2">🏁 Carrera {r.raceNumber}</p>
+                    <HorsesAdminPanel race={r} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           {updateMut.isError && (
             <p className="text-red-700 text-sm">
               Error: {(updateMut.error as any)?.response?.data?.error || 'inesperado'}
@@ -384,7 +406,9 @@ function ReunionWizard({
 
   const [raceCount, setRaceCount] = useState(1);
   const [defaultHorses, setDefaultHorses] = useState(12);
-  const [races, setRaces] = useState<DraftRace[]>([{ raceNumber: 1, horseCount: 12 }]);
+  const [races, setRaces] = useState<DraftRace[]>([
+    { raceNumber: 1, horseCount: 12, favoriteNumber: 1 },
+  ]);
 
   function applyRaceCount(n: number) {
     const safe = Math.max(1, Math.min(40, n));
@@ -395,6 +419,7 @@ function ReunionWizard({
       next.push({
         raceNumber: i + 1,
         horseCount: existing ? existing.horseCount : defaultHorses,
+        favoriteNumber: existing?.favoriteNumber ?? 1,
       });
     }
     setRaces(next);
@@ -411,13 +436,13 @@ function ReunionWizard({
     setRaces(
       races.map((r, i) => {
         if (i !== idx) return r;
-        const fav = r.favoriteNumber && r.favoriteNumber <= safe ? r.favoriteNumber : null;
+        const fav = r.favoriteNumber && r.favoriteNumber <= safe ? r.favoriteNumber : 1;
         return { ...r, horseCount: safe, favoriteNumber: fav };
       }),
     );
   }
 
-  function setFavoriteForRace(idx: number, n: number | null) {
+  function setFavoriteForRace(idx: number, n: number) {
     setRaces(races.map((r, i) => (i === idx ? { ...r, favoriteNumber: n } : r)));
   }
 
@@ -451,6 +476,8 @@ function ReunionWizard({
   races.forEach((r) => {
     if (r.horseCount < 2)
       racesReasons.push(`Carrera ${r.raceNumber}: necesita al menos 2 caballos.`);
+    if (!r.favoriteNumber || r.favoriteNumber < 1 || r.favoriteNumber > r.horseCount)
+      racesReasons.push(`Carrera ${r.raceNumber}: debe tener un favorito.`);
   });
   const racesValid = racesReasons.length === 0;
 
@@ -465,7 +492,7 @@ function ReunionWizard({
         races: races.map((r) => ({
           raceNumber: r.raceNumber,
           horseCount: r.horseCount,
-          favoriteNumber: r.favoriteNumber ?? undefined,
+          favoriteNumber: r.favoriteNumber,
         })),
       };
       if (useCustomDeadline && customDeadlineDate) {
@@ -654,15 +681,9 @@ function ReunionWizard({
                         <span className="text-xs text-slate-500">⭐ favorito #:</span>
                         <select
                           className="input max-w-[110px] py-1.5 text-sm"
-                          value={r.favoriteNumber ?? ''}
-                          onChange={(e) =>
-                            setFavoriteForRace(
-                              idx,
-                              e.target.value === '' ? null : Number(e.target.value),
-                            )
-                          }
+                          value={r.favoriteNumber ?? 1}
+                          onChange={(e) => setFavoriteForRace(idx, Number(e.target.value))}
                         >
-                          <option value="">— sin favorito —</option>
                           {Array.from({ length: r.horseCount }, (_, i) => i + 1).map((n) => (
                             <option key={n} value={n}>
                               #{n}
