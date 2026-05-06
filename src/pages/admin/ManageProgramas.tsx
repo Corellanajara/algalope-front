@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Programa, RaceWeek } from '../../lib/types';
+import { Programa, Reunion } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
 
 interface AdminUser {
@@ -14,12 +14,14 @@ interface AdminUser {
 export default function ManageProgramas() {
   const qc = useQueryClient();
 
-  const weeksQ = useQuery({
-    queryKey: ['weeks'],
-    queryFn: async () => (await api.get<RaceWeek[]>('/reuniones/weeks')).data,
+  const reunionesQ = useQuery({
+    queryKey: ['reuniones', 'all-for-programas'],
+    queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
   });
-  const [weekId, setWeekId] = useState<number | null>(null);
-  const currentWeek = weekId ?? weeksQ.data?.[0]?.id ?? null;
+  const [reunionId, setReunionId] = useState<number | null>(null);
+  const currentReunionId = reunionId ?? reunionesQ.data?.[0]?.id ?? null;
+  const currentReunion = reunionesQ.data?.find((r) => r.id === currentReunionId);
+  const currentWeek = currentReunion?.weekId ?? null;
 
   const usersQ = useQuery({
     queryKey: ['users'],
@@ -50,7 +52,6 @@ export default function ManageProgramas() {
     [programasQ.data],
   );
 
-  const week = weeksQ.data?.find((w) => w.id === currentWeek);
   const totalPaid = (programasQ.data ?? []).filter((p) => p.paid).length;
   const totalUsers = (usersQ.data ?? []).filter((u) => u.role !== 'ADMIN').length;
 
@@ -59,28 +60,29 @@ export default function ManageProgramas() {
       <div>
         <h1 className="text-3xl font-extrabold">Programas</h1>
         <p className="text-slate-600">
-          Registro manual de programas (pagos) por semana y usuario.
+          Registro manual de programas (pagos) por reunión y usuario.
         </p>
       </div>
 
       <div className="card p-5 flex flex-wrap items-end gap-4">
         <div>
-          <label className="label">Semana</label>
+          <label className="label">Reunión</label>
           <select
-            className="input min-w-[220px]"
-            value={currentWeek ?? ''}
-            onChange={(e) => setWeekId(Number(e.target.value))}
+            className="input min-w-[280px]"
+            value={currentReunionId ?? ''}
+            onChange={(e) => setReunionId(Number(e.target.value))}
           >
-            {weeksQ.data?.map((w) => (
-              <option key={w.id} value={w.id}>
-                Semana {w.weekNumber} / {w.year}
+            {reunionesQ.data?.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.racetrack?.name ? `${r.racetrack.name} · ` : ''}
+                {r.name}
               </option>
             ))}
           </select>
         </div>
-        {week && (
+        {currentReunion && (
           <p className="text-xs text-slate-500">
-            Período: {formatDateTime(week.startDate)} → {formatDateTime(week.endDate)}
+            Fecha: {formatDateTime(currentReunion.reunionDate)}
           </p>
         )}
         <div className="ml-auto flex gap-3 text-sm">

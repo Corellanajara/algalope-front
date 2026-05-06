@@ -17,7 +17,13 @@ const tiles = [
     to: '/admin/programas',
     title: 'Programas',
     icon: '💳',
-    desc: 'Registro manual de programas (pagos) por semana.',
+    desc: 'Registro manual de programas (pagos) por reunión.',
+  },
+  {
+    to: '/admin/caballos',
+    title: 'Caballos',
+    icon: '🐴',
+    desc: 'Configurar la cantidad de caballos de cada carrera.',
   },
   {
     to: '/admin/usuarios',

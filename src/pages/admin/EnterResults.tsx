@@ -1,37 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../lib/api';
-import { Reunion, Race, RaceWeek } from '../../lib/types';
+import { Reunion, Race } from '../../lib/types';
 import { formatDateTime } from '../../lib/utils';
 
 export default function EnterResults() {
-  const weeksQ = useQuery({
-    queryKey: ['weeks'],
-    queryFn: async () => (await api.get<RaceWeek[]>('/reuniones/weeks')).data,
+  const allReunionesQ = useQuery({
+    queryKey: ['reuniones', 'all-for-results'],
+    queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
   });
-  const [weekId, setWeekId] = useState<number | null>(null);
-  const currentWeek = weekId ?? weeksQ.data?.[0]?.id ?? null;
+  const [reunionId, setReunionId] = useState<number | null>(null);
+  const currentReunionId =
+    reunionId ?? allReunionesQ.data?.[0]?.id ?? null;
 
   const reunionesQ = useQuery({
-    queryKey: ['reuniones', 'byWeek', currentWeek],
+    queryKey: ['reuniones', 'byId', currentReunionId],
     queryFn: async () =>
-      currentWeek ? (await api.get<Reunion[]>(`/reuniones?weekId=${currentWeek}`)).data : [],
-    enabled: !!currentWeek,
+      currentReunionId
+        ? [(await api.get<Reunion>(`/reuniones/${currentReunionId}`)).data]
+        : [],
+    enabled: !!currentReunionId,
   });
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-extrabold">Ingresar resultados</h1>
       <div className="card p-5">
-        <label className="label">Semana</label>
+        <label className="label">Reunión</label>
         <select
-          className="input max-w-xs"
-          value={currentWeek ?? ''}
-          onChange={(e) => setWeekId(Number(e.target.value))}
+          className="input max-w-md"
+          value={currentReunionId ?? ''}
+          onChange={(e) => setReunionId(Number(e.target.value))}
         >
-          {weeksQ.data?.map((w) => (
-            <option key={w.id} value={w.id}>
-              Semana {w.weekNumber} / {w.year}
+          {allReunionesQ.data?.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.racetrack?.name ? `${r.racetrack.name} · ` : ''}
+              {r.name} — {formatDateTime(r.reunionDate)}
             </option>
           ))}
         </select>
@@ -66,7 +70,7 @@ export default function EnterResults() {
           </div>
         ))}
         {!reunionesQ.data?.length && (
-          <p className="text-slate-500 text-sm">No hay reuniones en esta semana.</p>
+          <p className="text-slate-500 text-sm">No hay reuniones disponibles.</p>
         )}
       </div>
     </div>

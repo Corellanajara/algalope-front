@@ -13,7 +13,6 @@ interface HistoryItem {
       name: string;
       reunionDate: string;
       racetrack: { name: string };
-      week: { year: number; weekNumber: number };
     };
   };
   pick: { id: number; horse: { id: number; name: string; number: number } };

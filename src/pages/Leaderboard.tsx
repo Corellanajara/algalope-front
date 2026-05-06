@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { LeaderEntry, Reunion, RaceWeek } from '../lib/types';
+import { LeaderEntry, Reunion } from '../lib/types';
 import { useAuth } from '../lib/auth';
 
 function isSameLocalDay(a: Date, b: Date) {
@@ -18,14 +18,9 @@ function reunionLabel(r: Reunion) {
 
 export default function Leaderboard() {
   const { user } = useAuth();
-  const [weekId, setWeekId] = useState<'all' | number>('all');
   const [reunionId, setReunionId] = useState<'all' | number>('all');
   const [initialized, setInitialized] = useState(false);
 
-  const weeks = useQuery({
-    queryKey: ['weeks'],
-    queryFn: async () => (await api.get<RaceWeek[]>('/reuniones/weeks')).data,
-  });
   const reunionesQ = useQuery({
     queryKey: ['reuniones', 'all-for-leaderboard'],
     queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
@@ -42,11 +37,10 @@ export default function Leaderboard() {
     setInitialized(true);
   }, [reunionesQ.data, initialized]);
   const board = useQuery({
-    queryKey: ['leaderboard', weekId, reunionId],
+    queryKey: ['leaderboard', reunionId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (reunionId !== 'all') params.set('reunionId', String(reunionId));
-      else if (weekId !== 'all') params.set('weekId', String(weekId));
       const q = params.toString() ? `?${params}` : '';
       return (await api.get<LeaderEntry[]>(`/leaderboard${q}`)).data;
     },
@@ -58,9 +52,7 @@ export default function Leaderboard() {
   const subtitle =
     reunionId !== 'all'
       ? `Ranking de la reunión #${reunionId}`
-      : weekId === 'all'
-      ? 'Acumulado general'
-      : 'Ranking de la semana';
+      : 'Acumulado general';
 
   return (
     <div className="space-y-6">
@@ -76,19 +68,6 @@ export default function Leaderboard() {
             value={reunionId}
             onChange={setReunionId}
           />
-          <select
-            className="input max-w-xs"
-            value={weekId}
-            disabled={reunionId !== 'all'}
-            onChange={(e) => setWeekId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          >
-            <option value="all">Acumulado general</option>
-            {weeks.data?.map((w) => (
-              <option key={w.id} value={w.id}>
-                Semana {w.weekNumber} / {w.year}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 

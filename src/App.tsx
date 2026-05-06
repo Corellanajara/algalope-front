@@ -12,6 +12,7 @@ import ManageReuniones from './pages/admin/ManageReuniones';
 import EnterResults from './pages/admin/EnterResults';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageProgramas from './pages/admin/ManageProgramas';
+import ManageHorses from './pages/admin/ManageHorses';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/admin/resultados" element={<EnterResults />} />
             <Route path="/admin/usuarios" element={<ManageUsers />} />
             <Route path="/admin/programas" element={<ManageProgramas />} />
+            <Route path="/admin/caballos" element={<ManageHorses />} />
           </Route>
         </Route>
       </Route>
