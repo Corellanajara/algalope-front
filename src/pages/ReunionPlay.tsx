@@ -81,6 +81,11 @@ export default function ReunionPlay() {
     },
   });
 
+  const pointsByUser = useMemo(
+    () => new Map((reunionScoresQ.data ?? []).map((e) => [e.user.id, e.points])),
+    [reunionScoresQ.data],
+  );
+
   if (reunionQ.isLoading) return <p>Cargando cartilla...</p>;
   if (!reunionQ.data) return <p>Reunión no encontrada.</p>;
 
@@ -91,11 +96,6 @@ export default function ReunionPlay() {
   const progress = races.length ? Math.round((done / races.length) * 100) : 0;
   const ready = done === races.length && races.length > 0;
   const currentRace = races[currentStep];
-
-  const pointsByUser = useMemo(
-    () => new Map((reunionScoresQ.data ?? []).map((e) => [e.user.id, e.points])),
-    [reunionScoresQ.data],
-  );
 
   function buildRows() {
     return (allPicksQ.data ?? []).map((c) => {
