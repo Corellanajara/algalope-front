@@ -224,12 +224,18 @@ export default function ReunionPlay() {
                   const url = URL.createObjectURL(
                     new Blob([resp.data], { type: 'application/pdf' }),
                   );
-                  window.open(url, '_blank');
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = reunion.document!.filename || `programa-${reunion.id}.pdf`;
+                  a.rel = 'noopener';
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
                   setTimeout(() => URL.revokeObjectURL(url), 60000);
                 }}
                 className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 transition backdrop-blur rounded-full px-4 py-2 text-xs font-semibold"
               >
-                📄 Ver programa
+                📄 Descargar programa
               </button>
             )}
           </div>
