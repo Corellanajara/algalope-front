@@ -215,6 +215,23 @@ export default function ReunionPlay() {
               <span className="text-xs">⏰ Deadline: {formatDateTime(reunion.deadline)}</span>
               <Countdown to={reunion.deadline} />
             </div>
+            {reunion.document && (
+              <button
+                onClick={async () => {
+                  const resp = await api.get(`/reuniones/${reunion.id}/document`, {
+                    responseType: 'blob',
+                  });
+                  const url = URL.createObjectURL(
+                    new Blob([resp.data], { type: 'application/pdf' }),
+                  );
+                  window.open(url, '_blank');
+                  setTimeout(() => URL.revokeObjectURL(url), 60000);
+                }}
+                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 transition backdrop-blur rounded-full px-4 py-2 text-xs font-semibold"
+              >
+                📄 Ver programa
+              </button>
+            )}
           </div>
         </div>
       </div>

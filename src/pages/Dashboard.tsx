@@ -26,11 +26,6 @@ export default function Dashboard() {
     queryKey: ['racetracks'],
     queryFn: async () => (await api.get<Racetrack[]>('/racetracks')).data,
   });
-  const history = useQuery({
-    queryKey: ['history', 'me'],
-    queryFn: async () =>
-      (await api.get<{ totalPoints: number; items: any[] }>('/users/me/history')).data,
-  });
 
   const picksByRace = useMemo(
     () => new Map((picksQ.data ?? []).map((p) => [p.raceId, p])),
@@ -57,9 +52,6 @@ export default function Dashboard() {
       if (a.expired !== b.expired) return a.expired ? 1 : -1;
       return new Date(a.r.reunionDate).getTime() - new Date(b.r.reunionDate).getTime();
     });
-
-  const openReuniones = enriched.filter((e) => !e.expired).length;
-  const pending = enriched.filter((e) => !e.expired && e.doneCount < e.total).length;
 
   if (reunionesQ.isLoading) {
     return (
@@ -107,14 +99,6 @@ export default function Dashboard() {
             del deadline para participar.
           </p>
         </div>
-      </section>
-
-      {/* Stats */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon="📅" label="Reuniones" value={reuniones.length} tint="slate" />
-        <StatCard icon="🟢" label="Abiertas" value={openReuniones} tint="emerald" />
-        <StatCard icon="⏳" label="Pendientes" value={pending} tint="amber" />
-        <StatCard icon="🏆" label="Puntos totales" value={history.data?.totalPoints ?? 0} tint="brand" />
       </section>
 
       {/* Filters */}
@@ -181,32 +165,6 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: string;
-  label: string;
-  value: number;
-  tint: 'slate' | 'emerald' | 'amber' | 'brand';
-}) {
-  const tints: Record<string, string> = {
-    slate: 'from-slate-500/10 to-slate-500/0 text-slate-700',
-    emerald: 'from-emerald-500/15 to-emerald-500/0 text-emerald-700',
-    amber: 'from-amber-500/15 to-amber-500/0 text-amber-700',
-    brand: 'from-brand-500/15 to-brand-500/0 text-brand-700',
-  };
-  return (
-    <div className={`card p-4 bg-gradient-to-br ${tints[tint]}`}>
-      <div className="text-2xl">{icon}</div>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
-      <p className="text-2xl font-extrabold">{value}</p>
-    </div>
-  );
-}
-
 function ReunionCard({
   r,
   total,
@@ -218,6 +176,7 @@ function ReunionCard({
   doneCount: number;
   expired: boolean;
 }) {
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
   const settled = r.status === 'SETTLED';
   const complete = doneCount === total && total > 0;
 
@@ -234,11 +193,35 @@ function ReunionCard({
         <Countdown to={r.deadline} />
       </div>
 
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+          <span>
+            Cartilla · {total} carrera{total === 1 ? '' : 's'}
+          </span>
+          <span className="font-bold">
+            {doneCount}/{total}
+          </span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              complete
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                : 'bg-gradient-to-r from-brand-500 to-brand-400'
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
       <div className="mt-3 text-xs text-slate-500">
         ⏰ Cierre: {formatDateTime(r.deadline)}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+        <span className="chip bg-slate-100 text-slate-700">
+          📋 {r.cartillasCount ?? 0} cartilla{(r.cartillasCount ?? 0) === 1 ? '' : 's'} enviada{(r.cartillasCount ?? 0) === 1 ? '' : 's'}
+        </span>
         {settled ? (
           <span className="chip bg-slate-200 text-slate-700">✓ Finalizada</span>
         ) : expired ? (

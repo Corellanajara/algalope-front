@@ -21,6 +21,7 @@ export interface Reunion {
   week?: RaceWeek;
   races?: Race[];
   cartillasCount?: number;
+  document?: { filename: string; uploadedAt: string } | null;
 }
 export interface Pick {
   id: number; userId: number; raceId: number; horseId: number;

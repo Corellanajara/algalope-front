@@ -217,6 +217,7 @@ function EditReunionModal({
               <option value="SETTLED">SETTLED — liquidado</option>
             </select>
           </div>
+          <ReunionPdfManager reunion={reunion} />
           {updateMut.isError && (
             <p className="text-red-700 text-sm">
               Error: {(updateMut.error as any)?.response?.data?.error || 'inesperado'}
@@ -246,6 +247,112 @@ function EditReunionModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// --- PDF manager ---
+
+function ReunionPdfManager({ reunion }: { reunion: Reunion }) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadMut = useMutation({
+    mutationFn: async (file: File) => {
+      if (file.type !== 'application/pdf') throw new Error('Debe ser un PDF');
+      if (file.size > 20 * 1024 * 1024) throw new Error('El PDF supera 20 MB');
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = String(r.result ?? '');
+          const idx = s.indexOf(',');
+          resolve(idx >= 0 ? s.slice(idx + 1) : s);
+        };
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+      });
+      return (
+        await api.post(`/reuniones/${reunion.id}/document`, {
+          filename: file.name,
+          dataBase64,
+        })
+      ).data;
+    },
+    onSuccess: () => {
+      setUploadError(null);
+      qc.invalidateQueries({ queryKey: ['reuniones'] });
+    },
+    onError: (e: any) => {
+      setUploadError(e?.response?.data?.error || e?.message || 'Error al subir el PDF');
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async () => api.delete(`/reuniones/${reunion.id}/document`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reuniones'] }),
+  });
+
+  const doc = reunion.document ?? null;
+
+  return (
+    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+      <p className="text-xs uppercase tracking-wider font-semibold text-slate-600 mb-2">
+        📄 Programa (PDF)
+      </p>
+      {doc ? (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-sm min-w-0">
+            <p className="font-semibold truncate">{doc.filename}</p>
+            <p className="text-xs text-slate-500">
+              Subido: {formatDateTime(doc.uploadedAt)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="btn-ghost text-sm"
+              disabled={uploadMut.isPending}
+            >
+              Reemplazar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('¿Eliminar el PDF adjunto?')) deleteMut.mutate();
+              }}
+              className="text-red-600 text-sm hover:underline"
+              disabled={deleteMut.isPending}
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="btn-ghost text-sm"
+          disabled={uploadMut.isPending}
+        >
+          {uploadMut.isPending ? 'Subiendo...' : 'Subir PDF'}
+        </button>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) uploadMut.mutate(f);
+        }}
+      />
+      {uploadError && (
+        <p className="text-red-700 text-xs mt-2">{uploadError}</p>
+      )}
     </div>
   );
 }
