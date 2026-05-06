@@ -218,7 +218,6 @@ function ReunionCard({
   doneCount: number;
   expired: boolean;
 }) {
-  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
   const settled = r.status === 'SETTLED';
   const complete = doneCount === total && total > 0;
 
@@ -235,35 +234,11 @@ function ReunionCard({
         <Countdown to={r.deadline} />
       </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-          <span>
-            Cartilla · {total} carrera{total === 1 ? '' : 's'}
-          </span>
-          <span className="font-bold">
-            {doneCount}/{total}
-          </span>
-        </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${
-              complete
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                : 'bg-gradient-to-r from-brand-500 to-brand-400'
-            }`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-
       <div className="mt-3 text-xs text-slate-500">
         ⏰ Cierre: {formatDateTime(r.deadline)}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-        <span className="chip bg-slate-100 text-slate-700">
-          📋 {r.cartillasCount ?? 0} cartilla{(r.cartillasCount ?? 0) === 1 ? '' : 's'} enviada{(r.cartillasCount ?? 0) === 1 ? '' : 's'}
-        </span>
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
         {settled ? (
           <span className="chip bg-slate-200 text-slate-700">✓ Finalizada</span>
         ) : expired ? (

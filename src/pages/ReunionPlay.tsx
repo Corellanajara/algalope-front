@@ -419,9 +419,6 @@ export default function ReunionPlay() {
                 <tr className="border-b-2 border-slate-200 bg-slate-50">
                   <th className="py-3 px-4 font-semibold text-left sticky left-0 bg-slate-50 z-20 shadow-[1px_0_0_0_rgb(226_232_240)]">
                     <div className="text-xs uppercase tracking-wider text-slate-600 text-center">
-                      Nickname
-                    </div>
-                    <div className="text-[10px] font-normal text-slate-400 text-center">
                       Apodo
                     </div>
                   </th>
@@ -439,9 +436,13 @@ export default function ReunionPlay() {
                 </tr>
               </thead>
               <tbody>
-                {allPicksQ.data!.map((c) => {
+                {[...allPicksQ.data!]
+                  .sort(
+                    (a, b) =>
+                      (pointsByUser.get(b.user.id) ?? 0) - (pointsByUser.get(a.user.id) ?? 0),
+                  )
+                  .map((c) => {
                   const isMe = user?.id === c.user.id;
-                  const nickname = c.user.pseudonym?.trim() || '—';
                   const apodo = c.user.displayName;
                   const points = pointsByUser.get(c.user.id) ?? 0;
                   return (
@@ -462,12 +463,11 @@ export default function ReunionPlay() {
                           </span>
                           <div className="min-w-0">
                             <div className="font-semibold truncate flex items-center gap-1.5">
-                              {nickname}
+                              {apodo}
                               {isMe && (
                                 <span className="chip bg-brand-600 text-white text-[10px]">tú</span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-500 truncate">{apodo}</div>
                           </div>
                         </div>
                       </td>
