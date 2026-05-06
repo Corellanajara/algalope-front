@@ -164,7 +164,7 @@ function PodiumCard({
     2: {
       icon: '🥈',
       grad: 'from-slate-300 to-slate-400',
-      h: 'h-36',
+      h: 'h-40',
       size: 'text-4xl',
     },
     3: {
