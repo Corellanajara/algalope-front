@@ -1,13 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { LeaderEntry, Reunion, RaceWeek } from '../lib/types';
 import { useAuth } from '../lib/auth';
+
+function isSameLocalDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function reunionLabel(r: Reunion) {
+  return `${r.racetrack?.name ? `${r.racetrack.name} · ` : ''}${r.name}`;
+}
 
 export default function Leaderboard() {
   const { user } = useAuth();
   const [weekId, setWeekId] = useState<'all' | number>('all');
   const [reunionId, setReunionId] = useState<'all' | number>('all');
+  const [initialized, setInitialized] = useState(false);
 
   const weeks = useQuery({
     queryKey: ['weeks'],
@@ -17,6 +30,17 @@ export default function Leaderboard() {
     queryKey: ['reuniones', 'all-for-leaderboard'],
     queryFn: async () => (await api.get<Reunion[]>('/reuniones')).data,
   });
+
+  // On first load, default the filter to today's reunion (if any).
+  useEffect(() => {
+    if (initialized || !reunionesQ.data) return;
+    const today = new Date();
+    const todays = reunionesQ.data.find((r) =>
+      isSameLocalDay(new Date(r.reunionDate), today),
+    );
+    if (todays) setReunionId(todays.id);
+    setInitialized(true);
+  }, [reunionesQ.data, initialized]);
   const board = useQuery({
     queryKey: ['leaderboard', weekId, reunionId],
     queryFn: async () => {
@@ -47,21 +71,11 @@ export default function Leaderboard() {
           <p className="text-slate-600">{subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <select
-            className="input max-w-xs"
+          <ReunionAutocomplete
+            reuniones={reunionesQ.data ?? []}
             value={reunionId}
-            onChange={(e) =>
-              setReunionId(e.target.value === 'all' ? 'all' : Number(e.target.value))
-            }
-          >
-            <option value="all">Todas las reuniones</option>
-            {reunionesQ.data?.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.racetrack?.name ? `${r.racetrack.name} · ` : ''}
-                {r.name}
-              </option>
-            ))}
-          </select>
+            onChange={setReunionId}
+          />
           <select
             className="input max-w-xs"
             value={weekId}
@@ -141,6 +155,104 @@ export default function Leaderboard() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function ReunionAutocomplete({
+  reuniones,
+  value,
+  onChange,
+}: {
+  reuniones: Reunion[];
+  value: 'all' | number;
+  onChange: (v: 'all' | number) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Keep input text in sync with selected value when not actively editing.
+  useEffect(() => {
+    if (hasFocus) return;
+    if (value === 'all') setQuery('');
+    else {
+      const r = reuniones.find((x) => x.id === value);
+      setQuery(r ? reunionLabel(r) : '');
+    }
+  }, [value, reuniones, hasFocus]);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return reuniones.slice(0, 20);
+    return reuniones
+      .filter((r) => reunionLabel(r).toLowerCase().includes(q))
+      .slice(0, 20);
+  }, [reuniones, query]);
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <input
+        className="input max-w-xs"
+        placeholder="Buscar reunión..."
+        value={query}
+        onFocus={() => {
+          setHasFocus(true);
+          setOpen(true);
+        }}
+        onBlur={() => setHasFocus(false)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+      />
+      {open && (
+        <div className="absolute z-30 mt-1 w-full max-w-xs bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              onChange('all');
+              setQuery('');
+              setOpen(false);
+            }}
+            className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
+              value === 'all' ? 'bg-brand-50 text-brand-700 font-semibold' : ''
+            }`}
+          >
+            Todas las reuniones
+          </button>
+          {filtered.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(r.id);
+                setQuery(reunionLabel(r));
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 ${
+                value === r.id ? 'bg-brand-50 text-brand-700 font-semibold' : ''
+              }`}
+            >
+              {reunionLabel(r)}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-500">Sin coincidencias</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
