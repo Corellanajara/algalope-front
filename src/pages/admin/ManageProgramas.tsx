@@ -21,23 +21,22 @@ export default function ManageProgramas() {
   const [reunionId, setReunionId] = useState<number | null>(null);
   const currentReunionId = reunionId ?? reunionesQ.data?.[0]?.id ?? null;
   const currentReunion = reunionesQ.data?.find((r) => r.id === currentReunionId);
-  const currentWeek = currentReunion?.weekId ?? null;
 
   const usersQ = useQuery({
     queryKey: ['users'],
     queryFn: async () => (await api.get<AdminUser[]>('/users')).data,
   });
   const programasQ = useQuery({
-    queryKey: ['programas', currentWeek],
+    queryKey: ['programas', currentReunionId],
     queryFn: async () =>
-      currentWeek
-        ? (await api.get<Programa[]>(`/programas?weekId=${currentWeek}`)).data
+      currentReunionId
+        ? (await api.get<Programa[]>(`/programas?reunionId=${currentReunionId}`)).data
         : [],
-    enabled: !!currentWeek,
+    enabled: !!currentReunionId,
   });
 
   const upsertMut = useMutation({
-    mutationFn: async (body: { userId: number; weekId: number; paid: boolean; note?: string | null }) =>
+    mutationFn: async (body: { userId: number; reunionId: number; paid: boolean; note?: string | null }) =>
       (await api.post('/programas', body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['programas'] }),
   });
@@ -116,14 +115,14 @@ export default function ManageProgramas() {
                     key={u.id}
                     user={u}
                     programa={p}
-                    weekId={currentWeek!}
+                    reunionId={currentReunionId!}
                     onTogglePay={(paid) => {
                       if (p) updateMut.mutate({ id: p.id, paid });
-                      else upsertMut.mutate({ userId: u.id, weekId: currentWeek!, paid });
+                      else upsertMut.mutate({ userId: u.id, reunionId: currentReunionId!, paid });
                     }}
                     onSaveNote={(note) => {
                       if (p) updateMut.mutate({ id: p.id, note });
-                      else upsertMut.mutate({ userId: u.id, weekId: currentWeek!, paid: false, note });
+                      else upsertMut.mutate({ userId: u.id, reunionId: currentReunionId!, paid: false, note });
                     }}
                   />
                 );
@@ -150,7 +149,7 @@ function UserRow({
 }: {
   user: AdminUser;
   programa?: Programa;
-  weekId: number;
+  reunionId: number;
   onTogglePay: (paid: boolean) => void;
   onSaveNote: (note: string | null) => void;
 }) {

@@ -47,10 +47,10 @@ export interface LeaderEntry {
 }
 
 export interface Programa {
-  id: number; userId: number; weekId: number;
+  id: number; userId: number; reunionId: number;
   paid: boolean; paidAt: string | null; note: string | null;
   user?: { id: number; displayName: string; email: string };
-  week?: RaceWeek;
+  reunion?: Reunion;
 }
 
 export function displayUserName(u: {
