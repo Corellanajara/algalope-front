@@ -32,6 +32,10 @@ export default function Register() {
         <div className="text-center">
           <div className="text-5xl">🏇</div>
           <h1 className="text-2xl font-bold mt-2">Crear cuenta</h1>
+          <p className="text-xs text-slate-500 mt-2">
+            El registro público solo está disponible para el primer usuario del sistema. Después,
+            las cuentas las crea tu administrador.
+          </p>
         </div>
         {error && <div className="bg-red-50 text-red-700 text-sm p-2 rounded">{error}</div>}
         <div>

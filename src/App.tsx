@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute, SuperAdminRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +13,7 @@ import EnterResults from './pages/admin/EnterResults';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageProgramas from './pages/admin/ManageProgramas';
 import ManageHorses from './pages/admin/ManageHorses';
+import ManageAdmins from './pages/admin/ManageAdmins';
 
 export default function App() {
   return (
@@ -32,6 +33,9 @@ export default function App() {
             <Route path="/admin/usuarios" element={<ManageUsers />} />
             <Route path="/admin/programas" element={<ManageProgramas />} />
             <Route path="/admin/caballos" element={<ManageHorses />} />
+          </Route>
+          <Route element={<SuperAdminRoute />}>
+            <Route path="/admin/admins" element={<ManageAdmins />} />
           </Route>
         </Route>
       </Route>

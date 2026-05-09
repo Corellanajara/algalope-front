@@ -12,6 +12,16 @@ export function AdminRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'ADMIN') return <Navigate to="/" replace />;
+  if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+    return <Navigate to="/" replace />;
+  }
+  return <Outlet />;
+}
+
+export function SuperAdminRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'SUPERADMIN') return <Navigate to="/" replace />;
   return <Outlet />;
 }

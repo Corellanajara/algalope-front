@@ -4,22 +4,22 @@ import { api } from '../../lib/api';
 import { formatDate } from '../../lib/utils';
 import { useAuth } from '../../lib/auth';
 
-interface AdminUser {
+interface AdminRow {
   id: number;
   email: string;
   displayName: string;
   pseudonym: string | null;
-  role: 'USER' | 'ADMIN' | 'SUPERADMIN';
-  adminId: number | null;
+  role: 'ADMIN';
   createdAt: string;
+  usersCount: number;
 }
 
-export default function ManageUsers() {
+export default function ManageAdmins() {
   const qc = useQueryClient();
   const { user: me } = useAuth();
   const { data } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => (await api.get<AdminUser[]>('/users')).data,
+    queryKey: ['admins'],
+    queryFn: async () => (await api.get<AdminRow[]>('/admins')).data,
   });
 
   const [showForm, setShowForm] = useState(false);
@@ -28,14 +28,14 @@ export default function ManageUsers() {
 
   const createMut = useMutation({
     mutationFn: async (payload: typeof form) =>
-      (await api.post<AdminUser>('/users', payload)).data,
+      (await api.post<AdminRow>('/admins', payload)).data,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['users'] });
+      qc.invalidateQueries({ queryKey: ['admins'] });
       setShowForm(false);
       setForm({ email: '', displayName: '', pseudonym: '', password: '' });
       setError(null);
     },
-    onError: (err: any) => setError(err?.response?.data?.error || 'Error al crear usuario'),
+    onError: (err: any) => setError(err?.response?.data?.error || 'Error al crear admin'),
   });
 
   const updateMut = useMutation({
@@ -47,57 +47,46 @@ export default function ManageUsers() {
       displayName?: string;
       pseudonym?: string | null;
       password?: string;
-    }) => (await api.patch<AdminUser>(`/users/${id}`, payload)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    }) => (await api.patch<AdminRow>(`/admins/${id}`, payload)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
     onError: (err: any) => alert(err?.response?.data?.error || 'Error al actualizar'),
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (id: number) => (await api.delete(`/users/${id}`)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    mutationFn: async (id: number) => (await api.delete(`/admins/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
     onError: (err: any) => alert(err?.response?.data?.error || 'Error al eliminar'),
   });
 
-  function editNickname(u: AdminUser) {
-    const next = window.prompt(`Nuevo apodo para ${u.email}:`, u.displayName)?.trim();
-    if (!next || next === u.displayName) return;
-    updateMut.mutate({ id: u.id, displayName: next });
-  }
-
-  function editPseudonym(u: AdminUser) {
-    const raw = window.prompt(
-      `Pseudónimo para ${u.email} — vacío para quitar:`,
-      u.pseudonym ?? '',
-    );
-    if (raw === null) return;
-    const trimmed = raw.trim();
-    updateMut.mutate({ id: u.id, pseudonym: trimmed === '' ? null : trimmed });
-  }
-
-  function resetPassword(u: AdminUser) {
-    const pwd = window.prompt(`Nueva contraseña para ${u.email} (mín. 6):`)?.trim();
+  function resetPassword(a: AdminRow) {
+    const pwd = window.prompt(`Nueva contraseña para ${a.email} (mín. 6):`)?.trim();
     if (!pwd) return;
     if (pwd.length < 6) return alert('La contraseña debe tener al menos 6 caracteres');
-    updateMut.mutate({ id: u.id, password: pwd });
+    updateMut.mutate({ id: a.id, password: pwd });
   }
 
-  function removeUser(u: AdminUser) {
-    if (!window.confirm(`¿Eliminar usuario ${u.displayName} (${u.email})?`)) return;
-    deleteMut.mutate(u.id);
+  function removeAdmin(a: AdminRow) {
+    if (
+      !window.confirm(
+        `¿Eliminar al admin ${a.displayName}? Se borrarán también sus usuarios, reuniones y programas.`,
+      )
+    )
+      return;
+    deleteMut.mutate(a.id);
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Mis usuarios</h1>
+        <h1 className="text-2xl font-bold">Administradores</h1>
         <button className="btn-primary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? 'Cancelar' : '+ Nuevo usuario'}
+          {showForm ? 'Cancelar' : '+ Nuevo admin'}
         </button>
       </div>
 
       <p className="text-sm text-slate-600">
-        Los usuarios que crees aquí pertenecen a tu tenant. Solo verán las reuniones, programas y
-        rankings que vos administres.
+        Cada administrador es un tenant independiente con sus propios usuarios, reuniones,
+        programas y ranking.
       </p>
 
       {showForm && (
@@ -156,7 +145,7 @@ export default function ManageUsers() {
           )}
           <div className="md:col-span-2 flex justify-end">
             <button type="submit" disabled={createMut.isPending} className="btn-primary">
-              {createMut.isPending ? 'Creando...' : 'Crear usuario'}
+              {createMut.isPending ? 'Creando...' : 'Crear admin'}
             </button>
           </div>
         </form>
@@ -168,59 +157,31 @@ export default function ManageUsers() {
             <tr>
               <th className="p-3">#</th>
               <th className="p-3">Apodo</th>
-              <th className="p-3">Pseudónimo</th>
               <th className="p-3">Email</th>
-              <th className="p-3">Rol</th>
-              <th className="p-3">Registrado</th>
+              <th className="p-3">Usuarios</th>
+              <th className="p-3">Creado</th>
               <th className="p-3 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {data?.map((u) => (
-              <tr key={u.id} className="border-t border-slate-100">
-                <td className="p-3">{u.id}</td>
-                <td className="p-3 font-medium">{u.displayName}</td>
-                <td className="p-3 text-sm">
-                  {u.pseudonym ?? <span className="text-slate-400">—</span>}
-                </td>
-                <td className="p-3">{u.email}</td>
-                <td className="p-3">
-                  <span
-                    className={`chip ${
-                      u.role === 'SUPERADMIN'
-                        ? 'bg-amber-100 text-amber-700'
-                        : u.role === 'ADMIN'
-                        ? 'bg-brand-100 text-brand-700'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    {u.role}
-                  </span>
-                </td>
-                <td className="p-3 text-sm text-slate-600">{formatDate(u.createdAt)}</td>
+            {data?.map((a) => (
+              <tr key={a.id} className="border-t border-slate-100">
+                <td className="p-3">{a.id}</td>
+                <td className="p-3 font-medium">{a.displayName}</td>
+                <td className="p-3">{a.email}</td>
+                <td className="p-3">{a.usersCount}</td>
+                <td className="p-3 text-sm text-slate-600">{formatDate(a.createdAt)}</td>
                 <td className="p-3 text-right space-x-2 whitespace-nowrap">
                   <button
                     className="text-brand-600 hover:underline text-sm"
-                    onClick={() => editNickname(u)}
-                  >
-                    Apodo
-                  </button>
-                  <button
-                    className="text-brand-600 hover:underline text-sm"
-                    onClick={() => editPseudonym(u)}
-                  >
-                    Pseudónimo
-                  </button>
-                  <button
-                    className="text-brand-600 hover:underline text-sm"
-                    onClick={() => resetPassword(u)}
+                    onClick={() => resetPassword(a)}
                   >
                     Contraseña
                   </button>
-                  {u.id !== me?.id && (
+                  {a.id !== me?.id && (
                     <button
                       className="text-red-600 hover:underline text-sm"
-                      onClick={() => removeUser(u)}
+                      onClick={() => removeAdmin(a)}
                     >
                       Eliminar
                     </button>

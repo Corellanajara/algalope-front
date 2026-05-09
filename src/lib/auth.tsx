@@ -6,7 +6,8 @@ export interface User {
   email: string;
   displayName: string;
   pseudonym?: string | null;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN';
+  adminId?: number | null;
 }
 
 interface AuthCtx {

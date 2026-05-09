@@ -100,7 +100,7 @@ export default function Layout() {
             <NavLink to="/" end className={linkCls}>Carreras</NavLink>
             <NavLink to="/historial" className={linkCls}>Mi historial</NavLink>
             <NavLink to="/ranking" className={linkCls}>Ranking</NavLink>
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
               <NavLink to="/admin" className={linkCls}>Admin</NavLink>
             )}
           </nav>
@@ -120,8 +120,14 @@ export default function Layout() {
                       ({user.displayName})
                     </span>
                   )}
-                  {user.role === 'ADMIN' && (
-                    <span className="chip bg-brand-500 text-white text-[10px]">ADMIN</span>
+                  {(user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
+                    <span
+                      className={`chip text-white text-[10px] ${
+                        user.role === 'SUPERADMIN' ? 'bg-amber-500' : 'bg-brand-500'
+                      }`}
+                    >
+                      {user.role}
+                    </span>
                   )}
                   <button
                     onClick={changeNickname}
@@ -189,8 +195,14 @@ export default function Layout() {
                   {user.pseudonym && (
                     <p className="text-xs text-slate-500 truncate">{user.displayName}</p>
                   )}
-                  {user.role === 'ADMIN' && (
-                    <span className="chip bg-brand-500 text-white text-[10px] mt-1">ADMIN</span>
+                  {(user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
+                    <span
+                      className={`chip text-white text-[10px] mt-1 ${
+                        user.role === 'SUPERADMIN' ? 'bg-amber-500' : 'bg-brand-500'
+                      }`}
+                    >
+                      {user.role}
+                    </span>
                   )}
                 </div>
               </div>
@@ -199,7 +211,7 @@ export default function Layout() {
               <NavLink to="/" end className={drawerLinkCls}>🏁 Carreras</NavLink>
               <NavLink to="/historial" className={drawerLinkCls}>📋 Mi historial</NavLink>
               <NavLink to="/ranking" className={drawerLinkCls}>🏆 Ranking</NavLink>
-              {user?.role === 'ADMIN' && (
+              {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
                 <NavLink to="/admin" className={drawerLinkCls}>⚙️ Admin</NavLink>
               )}
               {user && (
