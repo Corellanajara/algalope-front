@@ -78,7 +78,7 @@ export default function Login() {
                 : undefined
             }
           >
-            Algalope
+            Por Una Cabeza
           </h1>
           <p className="text-slate-500 text-sm">Pronósticos hípicos con puntos</p>
         </div>

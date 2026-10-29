@@ -5,7 +5,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('algalope_token');
+  const token = localStorage.getItem('porunacabeza_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -16,8 +16,8 @@ api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('algalope_token');
-      localStorage.removeItem('algalope_user');
+      localStorage.removeItem('porunacabeza_token');
+      localStorage.removeItem('porunacabeza_user');
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }

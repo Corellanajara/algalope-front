@@ -33,7 +33,7 @@ export default function Layout() {
     try {
       const { data } = await api.patch('/users/me', { displayName: next });
       const updated = { ...user, displayName: data.displayName, pseudonym: data.pseudonym };
-      localStorage.setItem('algalope_user', JSON.stringify(updated));
+      localStorage.setItem('porunacabeza_user', JSON.stringify(updated));
       setUser(updated);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'No se pudo actualizar el apodo');
@@ -57,7 +57,7 @@ export default function Layout() {
     try {
       const { data } = await api.patch('/users/me', { pseudonym: next || null });
       const updated = { ...user, displayName: data.displayName, pseudonym: data.pseudonym };
-      localStorage.setItem('algalope_user', JSON.stringify(updated));
+      localStorage.setItem('porunacabeza_user', JSON.stringify(updated));
       setUser(updated);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'No se pudo actualizar el seudónimo');
@@ -94,7 +94,7 @@ export default function Layout() {
           </button>
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <span className="text-2xl">🏇</span>
-            <span className="text-xl font-extrabold tracking-wide">Algalope</span>
+            <span className="text-xl font-extrabold tracking-wide">Por Una Cabeza</span>
           </Link>
           <nav className="hidden md:flex gap-1 ml-4 overflow-x-auto">
             <NavLink to="/" end className={linkCls}>Carreras</NavLink>
@@ -174,7 +174,7 @@ export default function Layout() {
           <aside className="absolute top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-white shadow-xl flex flex-col animate-[slideIn_0.18s_ease-out]">
             <div className="bg-gradient-to-r from-turf-800 to-turf-700 text-white p-4 flex items-center justify-between">
               <span className="flex items-center gap-2 font-extrabold tracking-wide">
-                <span className="text-2xl">🏇</span> Algalope
+                <span className="text-2xl">🏇</span> Por Una Cabeza
               </span>
               <button
                 type="button"
@@ -254,7 +254,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <footer className="text-center text-xs text-slate-500 py-6">
-        🏇 Algalope — Pronósticos hípicos con puntos virtuales
+        🏇 Por Una Cabeza — Pronósticos hípicos con puntos virtuales
       </footer>
     </div>
   );

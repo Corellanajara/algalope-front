@@ -31,8 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('algalope_user');
-    const token = localStorage.getItem('algalope_token');
+    const stored = localStorage.getItem('porunacabeza_user');
+    const token = localStorage.getItem('porunacabeza_token');
     if (!stored || !token) {
       setLoading(false);
       return;
@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
       })
       .catch(() => {
-        localStorage.removeItem('algalope_token');
-        localStorage.removeItem('algalope_user');
+        localStorage.removeItem('porunacabeza_token');
+        localStorage.removeItem('porunacabeza_user');
         setUser(null);
       })
       .finally(() => setLoading(false));
@@ -54,8 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('algalope_token', data.token);
-    localStorage.setItem('algalope_user', JSON.stringify(data.user));
+    localStorage.setItem('porunacabeza_token', data.token);
+    localStorage.setItem('porunacabeza_user', JSON.stringify(data.user));
     setUser(data.user);
   }
 
@@ -68,14 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const payload: any = { email, password, displayName };
     if (pseudonym && pseudonym.trim()) payload.pseudonym = pseudonym.trim();
     const { data } = await api.post('/auth/register', payload);
-    localStorage.setItem('algalope_token', data.token);
-    localStorage.setItem('algalope_user', JSON.stringify(data.user));
+    localStorage.setItem('porunacabeza_token', data.token);
+    localStorage.setItem('porunacabeza_user', JSON.stringify(data.user));
     setUser(data.user);
   }
 
   function logout() {
-    localStorage.removeItem('algalope_token');
-    localStorage.removeItem('algalope_user');
+    localStorage.removeItem('porunacabeza_token');
+    localStorage.removeItem('porunacabeza_user');
     setUser(null);
   }
 
