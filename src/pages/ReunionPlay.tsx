@@ -478,7 +478,7 @@ export default function ReunionPlay() {
                   )
                   .map((c) => {
                   const isMe = user?.id === c.user.id;
-                  const apodo = c.user.displayName;
+                  const apodo = displayUserName(c.user);
                   const points = pointsByUser.get(c.user.id) ?? 0;
                   return (
                     <tr
