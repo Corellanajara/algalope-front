@@ -274,12 +274,19 @@ export function HorsesAdminPanel({ race }: { race: Race }) {
               ⭐
             </label>
             <label
-              className="text-xs flex items-center gap-1 cursor-pointer select-none"
-              title="Caballo dado de baja"
+              className={`text-xs flex items-center gap-1 select-none ${
+                h.isFavorite && !h.isScratched ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              title={
+                h.isFavorite && !h.isScratched
+                  ? 'No se puede dar de baja al favorito: marcá otro caballo como favorito primero'
+                  : 'Caballo dado de baja'
+              }
             >
               <input
                 type="checkbox"
                 checked={!!h.isScratched}
+                disabled={(h.isFavorite && !h.isScratched) || scratchMut.isPending}
                 onChange={(e) =>
                   scratchMut.mutate({ horseId: h.id, scratched: e.target.checked })
                 }
@@ -289,6 +296,9 @@ export function HorsesAdminPanel({ race }: { race: Race }) {
           </div>
         ))}
       </div>
+      <p className="text-xs text-slate-500 mt-1">
+        Para dar de baja al favorito, primero marcá otro caballo con ⭐.
+      </p>
       {setFavoriteMut.isError && (
         <p className="text-xs text-red-700 mt-1">
           {(setFavoriteMut.error as any)?.response?.data?.error || 'No se pudo cambiar el favorito'}
