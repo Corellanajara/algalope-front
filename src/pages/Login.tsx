@@ -47,14 +47,14 @@ export default function Login() {
   }
 
   const quickAccounts = [
-    { icon: '👤', label: 'Demo', email: 'demo@algalope.cl', password: 'demo123' },
-    { icon: '⚙️', label: 'Admin', email: 'admin@algalope.cl', password: 'admin123' },
-    { icon: '🥊', label: 'Rival', email: 'rival@algalope.cl', password: 'rival123' },
-    { icon: '🏇', label: 'Jorge', email: 'jorge@algalope.cl', password: 'jorge123' },
-    { icon: '🏇', label: 'María', email: 'maria@algalope.cl', password: 'maria123' },
-    { icon: '🏇', label: 'Pedro', email: 'pedro@algalope.cl', password: 'pedro123' },
-    { icon: '🏇', label: 'Ana', email: 'ana@algalope.cl', password: 'ana123' },
-    { icon: '🏇', label: 'Luis', email: 'luis@algalope.cl', password: 'luis123' },
+    { icon: '👤', label: 'Demo', email: 'demo@porunacabeza.cl', password: 'demo123' },
+    { icon: '⚙️', label: 'Admin', email: 'admin@porunacabeza.cl', password: 'admin123' },
+    { icon: '🥊', label: 'Rival', email: 'rival@porunacabeza.cl', password: 'rival123' },
+    { icon: '🏇', label: 'Jorge', email: 'jorge@porunacabeza.cl', password: 'jorge123' },
+    { icon: '🏇', label: 'María', email: 'maria@porunacabeza.cl', password: 'maria123' },
+    { icon: '🏇', label: 'Pedro', email: 'pedro@porunacabeza.cl', password: 'pedro123' },
+    { icon: '🏇', label: 'Ana', email: 'ana@porunacabeza.cl', password: 'ana123' },
+    { icon: '🏇', label: 'Luis', email: 'luis@porunacabeza.cl', password: 'luis123' },
   ];
 
   return (
